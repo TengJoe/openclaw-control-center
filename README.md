@@ -24,6 +24,10 @@ Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 
 
 如果你看到登录页，说明服务已经正常启动，只是在等本地令牌。
 
+如果你还不会安装或配置，直接看：
+- [docs/LOCAL_SETUP.zh.md](docs/LOCAL_SETUP.zh.md)
+- [docs/LOCAL_SETUP.en.md](docs/LOCAL_SETUP.en.md)
+
 ## 这台机器上的部署方式
 - 仓库目录：`~/.openclaw/workspace/agents/main/control-center`
 - 默认地址：`http://127.0.0.1:4310`
@@ -170,7 +174,7 @@ UI_MODE=true npm run dev
 
 ### 2. 安装项目
 ```bash
-git clone https://github.com/TianyiDataScience/openclaw-control-center.git
+git clone https://github.com/TengJoe/openclaw-control-center.git
 cd control-center
 npm install
 cp .env.example .env
@@ -194,6 +198,8 @@ cp .env.example .env
 如果你想直接复制独立文件，用这个：
 - [INSTALL_PROMPT.md](INSTALL_PROMPT.md)
 - [INSTALL_PROMPT.en.md](INSTALL_PROMPT.en.md)
+- [docs/LOCAL_SETUP.zh.md](docs/LOCAL_SETUP.zh.md)
+- [docs/LOCAL_SETUP.en.md](docs/LOCAL_SETUP.en.md)
 
 它应该一次性帮你做完这些事：
 - 检查本机 OpenClaw / Gateway / 路径

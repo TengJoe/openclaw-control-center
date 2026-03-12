@@ -56,7 +56,7 @@ Phase 2: install the project
    - `.env.example`
 11. If `src/runtime`, `src/ui`, or `package.json` is missing, do not continue and do not guess where the code should come from. Classify it as "wrong repo / incomplete checkout / wrong working directory", then:
    - leave the incorrect directory
-   - re-clone `https://github.com/TianyiDataScience/openclaw-control-center.git`
+   - re-clone `https://github.com/TengJoe/openclaw-control-center.git`
    - continue only after entering the new repo root
 12. Install dependencies.
 13. If `.env` does not exist, create it from `.env.example`. If it already exists, update it while preserving safe first-run defaults. Do not delete unrelated user settings; only change the keys required for this connection.

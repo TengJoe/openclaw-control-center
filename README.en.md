@@ -24,6 +24,10 @@ Language: **English** | [中文](README.md)
 
 If you see the login page, the service is up and waiting for your local token.
 
+If install and config still feel unclear, go straight to:
+- [docs/LOCAL_SETUP.en.md](docs/LOCAL_SETUP.en.md)
+- [docs/LOCAL_SETUP.zh.md](docs/LOCAL_SETUP.zh.md)
+
 ## Deployment On This Machine
 - Repo path: `~/.openclaw/workspace/agents/main/control-center`
 - Default URL: `http://127.0.0.1:4310`
@@ -184,7 +188,7 @@ For the richest dashboard data, it also helps if this machine has:
 
 ### 2. Install the project
 ```bash
-git clone https://github.com/TianyiDataScience/openclaw-control-center.git
+git clone https://github.com/TengJoe/openclaw-control-center.git
 cd control-center
 npm install
 cp .env.example .env
@@ -208,6 +212,8 @@ The best first-run path is not manual setup. The best path is to give your own O
 If you want a copy-ready standalone file, use:
 - [INSTALL_PROMPT.en.md](INSTALL_PROMPT.en.md)
 - [INSTALL_PROMPT.md](INSTALL_PROMPT.md)
+- [docs/LOCAL_SETUP.en.md](docs/LOCAL_SETUP.en.md)
+- [docs/LOCAL_SETUP.zh.md](docs/LOCAL_SETUP.zh.md)
 
 It should handle:
 - environment checks

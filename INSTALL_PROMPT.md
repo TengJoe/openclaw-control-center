@@ -56,7 +56,7 @@
    - `.env.example`
 11. 如果缺少 `src/runtime`、`src/ui` 或 `package.json`，不要继续安装，也不要猜源码去哪了。直接把它判定为“错误仓库 / 不完整 checkout / 错误工作目录”，并执行：
    - 退出当前错误目录
-   - 重新 clone：`https://github.com/TianyiDataScience/openclaw-control-center.git`
+   - 重新 clone：`https://github.com/TengJoe/openclaw-control-center.git`
    - 进入新 clone 的仓库根目录后再继续
 12. 运行依赖安装。
 13. 如果 `.env` 不存在，就从 `.env.example` 创建；如果存在，就在保留安全默认值的前提下修正它。不要删除用户已有的无关安全配置，只改这次接线真正需要的项。
