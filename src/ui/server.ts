@@ -6232,6 +6232,9 @@ async function renderHtml(
     .badge.warn { color: #94680e; border-color: rgba(181, 127, 16, 0.32); background: rgba(255, 248, 232, 0.95); }
     .badge.over, .badge.blocked, .badge.action-required, .badge.critical, .badge.fail, .badge.blocked_no_token { color: #b53125; border-color: rgba(210, 63, 49, 0.34); background: rgba(255, 240, 238, 0.95); }
     .badge.info, .badge.in_progress, .badge.active, .badge.armed, .badge.live, .badge.spawned, .badge.spawn { color: #0059b4; border-color: rgba(0, 113, 227, 0.32); background: rgba(236, 246, 255, 0.95); }
+    .badge.connected { color: #1d7435; border-color: rgba(36, 138, 61, 0.3); background: rgba(238, 251, 242, 0.95); }
+    .badge.partial { color: #94680e; border-color: rgba(181, 127, 16, 0.32); background: rgba(255, 248, 232, 0.95); }
+    .badge.not_connected { color: #666a70; border-color: rgba(125, 129, 136, 0.3); background: rgba(248, 248, 249, 0.95); }
     .badge.todo, .badge.planned, .badge.message, .badge.tool_event, .badge.idle, .badge.disabled { color: #666a70; border-color: rgba(125, 129, 136, 0.3); background: rgba(248, 248, 249, 0.95); }
     .badge.accepted { color: #1d7435; border-color: rgba(36, 138, 61, 0.3); background: rgba(238, 251, 242, 0.95); }
     .badge.enabled, .badge.pass { color: #1d7435; border-color: rgba(36, 138, 61, 0.3); background: rgba(238, 251, 242, 0.95); }
@@ -6938,13 +6941,15 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .badge.done,
     body[data-ui-theme-resolved="dark"] .badge.enabled,
     body[data-ui-theme-resolved="dark"] .badge.pass,
-    body[data-ui-theme-resolved="dark"] .badge.accepted {
+    body[data-ui-theme-resolved="dark"] .badge.accepted,
+    body[data-ui-theme-resolved="dark"] .badge.connected {
       color: #8fe0a9;
       border-color: rgba(143, 224, 169, 0.22);
       background: rgba(13, 39, 25, 0.96);
     }
     body[data-ui-theme-resolved="dark"] .badge.warn,
-    body[data-ui-theme-resolved="dark"] .badge.dry_run {
+    body[data-ui-theme-resolved="dark"] .badge.dry_run,
+    body[data-ui-theme-resolved="dark"] .badge.partial {
       color: #f4d79a;
       border-color: rgba(244, 215, 154, 0.22);
       background: rgba(54, 36, 10, 0.96);
@@ -6964,7 +6969,8 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .badge.message,
     body[data-ui-theme-resolved="dark"] .badge.tool_event,
     body[data-ui-theme-resolved="dark"] .badge.idle,
-    body[data-ui-theme-resolved="dark"] .badge.disabled {
+    body[data-ui-theme-resolved="dark"] .badge.disabled,
+    body[data-ui-theme-resolved="dark"] .badge.not_connected {
       color: #c9d5e3;
       border-color: rgba(201, 213, 227, 0.18);
       background: rgba(21, 32, 44, 0.96);
@@ -8053,6 +8059,7 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .global-visibility-card,
     body[data-ui-theme-resolved="dark"] .global-visibility-strip-card,
     body[data-ui-theme-resolved="dark"] .global-visibility-card .fold-body,
+    body[data-ui-theme-resolved="dark"] .segment-switch,
     body[data-ui-theme-resolved="dark"] .dashboard-strip,
     body[data-ui-theme-resolved="dark"] .signal-gauge-card,
     body[data-ui-theme-resolved="dark"] .summary-gauge-card,
