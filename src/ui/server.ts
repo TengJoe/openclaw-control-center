@@ -4217,9 +4217,15 @@ async function renderHtml(
         typeof item.numericValue === "number"
           ? ` data-counter-key="overview:${escapeHtml(item.key)}" data-counter-target="${Math.max(0, Math.round(item.numericValue))}" data-counter-format="int"`
           : "";
+      const valueClass =
+        item.displayValue.length >= 12
+          ? " overview-kpi-value-compact"
+          : item.displayValue.length >= 9
+            ? " overview-kpi-value-tight"
+            : "";
       return `<article class="overview-kpi-card tone-${escapeHtml(item.tone)}" data-overview-kpi="${escapeHtml(item.key)}">
         <div class="overview-kpi-label">${escapeHtml(item.title)}</div>
-        <div class="overview-kpi-value"${counterAttrs}>${escapeHtml(item.displayValue)}</div>
+        <div class="overview-kpi-value${valueClass}"${counterAttrs}>${escapeHtml(item.displayValue)}</div>
         <div class="overview-kpi-detail">${escapeHtml(item.detail)}</div>
       </article>`;
     })
@@ -5847,6 +5853,18 @@ async function renderHtml(
       color: #111827;
       font-weight: 740;
       font-variant-numeric: tabular-nums;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .overview-kpi-value.overview-kpi-value-tight {
+      font-size: clamp(32px, 2.8vw, 38px);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+    .overview-kpi-value.overview-kpi-value-compact {
+      font-size: clamp(26px, 2.4vw, 34px);
+      line-height: 0.94;
+      letter-spacing: -0.045em;
     }
     .overview-kpi-detail {
       margin-top: 8px;
