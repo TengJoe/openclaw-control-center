@@ -140,7 +140,7 @@ const DOC_HUB_DIR_CANDIDATES = [
   { dir: join(process.cwd(), "runtime", "evidence"), category: "证据报告" },
 ];
 const DOC_HUB_CHAT_INDEX_PATH = join(process.cwd(), "runtime", "doc-hub-chat.json");
-const HTML_HEAVY_CACHE_TTL_MS = 3_000;
+const HTML_HEAVY_CACHE_TTL_MS = 15_000;
 const HTML_USAGE_CACHE_TTL_MS = 10_000;
 const HTML_SNAPSHOT_CACHE_TTL_MS = 10_000;
 const HTML_LIVE_SESSIONS_CACHE_TTL_MS = POLLING_INTERVALS_MS.sessionsList;
@@ -3448,8 +3448,8 @@ async function loadCachedSessionPreview(snapshot: ReadModelSnapshot, toolClient:
     client: toolClient,
     filters: {},
     page: 1,
-    pageSize: 12,
-    historyLimit: 10,
+    pageSize: 8,
+    historyLimit: 6,
   });
   renderSessionPreviewCache = {
     snapshotAt: snapshot.generatedAt,
@@ -3673,7 +3673,7 @@ async function renderHtml(
             "先看排程和 Cron 执行。员工显示在工作，可能只是 Cron 或临时会话在跑，不一定已经落成可跟踪的任务条目。",
           )
         : sectionMeta.blurb;
-  const needsSessionPreview = activeSection === "projects-tasks" || activeSection === "overview";
+  const needsSessionPreview = activeSection === "projects-tasks";
   const needsTaskEvidence = activeSection === "projects-tasks";
   const needsTeamSnapshot = activeSection === "team";
   const needsMemoryFiles = activeSection === "memory";

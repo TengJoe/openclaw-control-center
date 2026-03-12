@@ -324,7 +324,7 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(source.includes("buildTaskDetailHref(task.taskId, input.language)"));
   assert(source.includes('const language = resolveUiLanguage(url.searchParams, "zh");'));
   assert(source.includes('buildUsageCostSnapshot(snapshot, mode)'));
-  assert(source.includes('const needsSessionPreview = activeSection === "projects-tasks" || activeSection === "overview";'));
+  assert(source.includes('const needsSessionPreview = activeSection === "projects-tasks";'));
   assert(source.includes("const allApprovals = [...(snapshot.approvals ?? [])].sort(compareApprovals);"));
   assert(source.includes('const pendingApprovalsCount = allApprovals.filter((item) => item.status === "pending").length;'));
   assert(source.includes("replayPreview.stats.timeline.total"));
