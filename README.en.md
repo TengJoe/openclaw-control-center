@@ -4,6 +4,8 @@
 
 Safety-first local control center for OpenClaw.
 
+Fork note: this fork adds stricter localhost auth boundaries and avoids startup monitor artifact writes when running the UI in readonly mode.
+
 Language: **English** | [中文](README.md)
 
 ## Why this exists

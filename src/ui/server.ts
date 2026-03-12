@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { OpenClawReadonlyAdapter } from "../adapters/openclaw-readonly";
 import {
   APPROVAL_ACTIONS_DRY_RUN,
   APPROVAL_ACTIONS_ENABLED,
@@ -153,6 +154,7 @@ const TASK_RUNTIME_ACTIVITY_WINDOW_MS = 6 * 60 * 60 * 1000;
 const STALLED_RUNNING_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000;
 const OPENCLAW_WORKSPACE_ROOT = resolve(process.cwd(), "..", "..", "..");
 const EDITABLE_WORKSPACE_ROOTS = resolveEditableWorkspaceRoots(process.env.EDITABLE_WORKSPACE_ROOTS);
+const LOCAL_UI_AUTH_COOKIE = "openclaw_local_auth";
 const WORKSPACE_EDITABLE_SKIP_DIRS = new Set(["node_modules", ".git", "dist", "coverage"]);
 const WORKSPACE_EDITABLE_EXTENSIONS = new Set([".md", ".markdown"]);
 const MEMORY_EDITABLE_EXTENSIONS = new Set([".md", ".markdown", ".txt"]);
@@ -505,6 +507,7 @@ let renderLiveSessionsCache:
   | undefined;
 let renderLiveSessionsInFlight: Promise<Awaited<ReturnType<ToolClient["sessionsList"]>>> | undefined;
 let renderReplayPreviewInFlight: Promise<Awaited<ReturnType<typeof loadReplayIndex>>> | undefined;
+let readonlySnapshotToolClient: ToolClient | undefined;
 
 type GlobalVisibilityTaskStatus = "done" | "not_done";
 
@@ -732,6 +735,7 @@ interface LinkageGraph {
 
 export function startUiServer(port: number, toolClient: ToolClient): Server {
   const approvalActions = new ApprovalActionService(toolClient);
+  readonlySnapshotToolClient = toolClient;
 
   const server = createServer(async (req, res) => {
     const method = req.method ?? "GET";
@@ -743,6 +747,59 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
       const path = url.pathname;
       const legacySection = resolveLegacyDashboardSection(path);
       const legacyAnchor = resolveLegacyDashboardAnchor(path);
+
+      if (method === "GET" && path === "/login") {
+        if (!isUiPageAuthEnabled()) {
+          return redirect(res, 302, "/");
+        }
+        const next = sanitizeUiLoginNextPath(url.searchParams.get("next"));
+        return writeText(
+          res,
+          200,
+          renderUiLoginPage({
+            next,
+            language: resolveUiLanguage(url.searchParams, "zh"),
+          }),
+          "text/html; charset=utf-8",
+        );
+      }
+
+      if (method === "POST" && path === "/login") {
+        if (!isUiPageAuthEnabled()) {
+          return redirect(res, 303, "/");
+        }
+        const form = await readFormBody(req);
+        const next = sanitizeUiLoginNextPath(form.get("next"));
+        const decision = evaluateLocalTokenGate({
+          gateRequired: true,
+          configuredToken: LOCAL_API_TOKEN,
+          providedToken: form.get("localToken") ?? undefined,
+          routeLabel: "/login",
+        });
+        if (!decision.ok) {
+          return writeText(
+            res,
+            decision.statusCode,
+            renderUiLoginPage({
+              next,
+              errorMessage: decision.message,
+              language: resolveUiLanguage(url.searchParams, "zh"),
+            }),
+            "text/html; charset=utf-8",
+          );
+        }
+        setCookie(res, `${LOCAL_UI_AUTH_COOKIE}=${encodeURIComponent(LOCAL_API_TOKEN)}; HttpOnly; Path=/; SameSite=Strict`);
+        return redirect(res, 303, next);
+      }
+
+      if (method === "POST" && path === "/logout") {
+        setCookie(res, `${LOCAL_UI_AUTH_COOKIE}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0`);
+        return redirect(res, 303, isUiPageAuthEnabled() ? "/login" : "/");
+      }
+
+      if (shouldRequireUiPageAuth(method, path) && !hasValidUiReadAuth(req)) {
+        return redirect(res, 302, buildUiLoginHref(req.url ?? "/"));
+      }
 
       if (method === "GET" && (path === "/" || legacySection)) {
         const prefs = await loadUiPreferences();
@@ -1730,6 +1787,17 @@ async function readReadModelSnapshot(): Promise<ReadModelSnapshot> {
   }
 
   const nextValue = (async () => {
+    const snapshotMissing = sourceStamp.includes(`${SNAPSHOT_PATH}:missing`);
+    if (READONLY_MODE && snapshotMissing && readonlySnapshotToolClient) {
+      const adapter = new OpenClawReadonlyAdapter(readonlySnapshotToolClient);
+      const value = await adapter.snapshot();
+      renderSnapshotCache = {
+        sourceStamp,
+        value,
+        expiresAt: Date.now() + HTML_SNAPSHOT_CACHE_TTL_MS,
+      };
+      return value;
+    }
     const snapshot = (await readSnapshotJsonWithRetry()) as Partial<ReadModelSnapshot>;
     const [projects, tasks, budgetPolicy] = await Promise.all([
       loadProjectStore(),
@@ -13126,6 +13194,19 @@ function redirect(res: ServerResponse, statusCode: number, location: string): vo
   res.end();
 }
 
+function setCookie(res: ServerResponse, value: string): void {
+  const existing = res.getHeader("set-cookie");
+  if (!existing) {
+    res.setHeader("set-cookie", value);
+    return;
+  }
+  if (Array.isArray(existing)) {
+    res.setHeader("set-cookie", [...existing, value]);
+    return;
+  }
+  res.setHeader("set-cookie", [String(existing), value]);
+}
+
 function resolveRequestId(req: IncomingMessage): string {
   const headerValue = req.headers["x-request-id"];
   if (typeof headerValue === "string") {
@@ -13186,7 +13267,19 @@ function assertMutationAuthorized(
 }
 
 function assertSensitiveReadAuthorized(req: IncomingMessage, routeLabel: string): void {
-  assertMutationAuthorized(req, routeLabel);
+  const token =
+    normalizeToken(readHeaderValue(req, LOCAL_TOKEN_HEADER)) ??
+    normalizeToken(readAuthorizationBearer(readHeaderValue(req, "authorization"))) ??
+    readUiAuthToken(req);
+  const decision = evaluateLocalTokenGate({
+    gateRequired: LOCAL_TOKEN_AUTH_REQUIRED,
+    configuredToken: LOCAL_API_TOKEN,
+    providedToken: token,
+    routeLabel,
+  });
+  if (!decision.ok) {
+    throw new RequestValidationError(decision.message, decision.statusCode);
+  }
 }
 
 function assertLocalStateMutationAuthorized(
@@ -13201,6 +13294,94 @@ function assertLocalStateMutationAuthorized(
     );
   }
   assertMutationAuthorized(req, routeLabel, explicitToken);
+}
+
+function isUiPageAuthEnabled(): boolean {
+  return LOCAL_TOKEN_AUTH_REQUIRED && LOCAL_API_TOKEN !== "";
+}
+
+function shouldRequireUiPageAuth(method: string, path: string): boolean {
+  if (!isUiPageAuthEnabled() || method !== "GET") return false;
+  if (path === "/healthz" || path === "/login") return false;
+  if (path === "/snapshot" || path === "/graph" || path === "/view/pixel-state.json") return false;
+  return !path.startsWith("/api/");
+}
+
+function buildUiLoginHref(requestPath: string): string {
+  return `/login?next=${encodeURIComponent(sanitizeUiLoginNextPath(requestPath))}`;
+}
+
+function sanitizeUiLoginNextPath(input: string | null | undefined): string {
+  const value = typeof input === "string" ? input.trim() : "";
+  if (!value.startsWith("/") || value.startsWith("//")) return "/";
+  if (/[\u0000-\u001F\u007F]/.test(value)) return "/";
+  return value;
+}
+
+function readCookieMap(req: IncomingMessage): Map<string, string> {
+  const raw = readHeaderValue(req, "cookie");
+  const map = new Map<string, string>();
+  if (!raw) return map;
+  for (const chunk of raw.split(";")) {
+    const [namePart, ...rest] = chunk.split("=");
+    const name = namePart.trim();
+    if (!name) continue;
+    map.set(name, decodeURIComponent(rest.join("=").trim()));
+  }
+  return map;
+}
+
+function readUiAuthToken(req: IncomingMessage): string | undefined {
+  if (!isUiPageAuthEnabled()) return undefined;
+  return normalizeToken(readCookieMap(req).get(LOCAL_UI_AUTH_COOKIE));
+}
+
+function hasValidUiReadAuth(req: IncomingMessage): boolean {
+  const token = readUiAuthToken(req);
+  if (!token) return false;
+  return token === normalizeToken(LOCAL_API_TOKEN);
+}
+
+function renderUiLoginPage(input: {
+  next: string;
+  language: UiLanguage;
+  errorMessage?: string;
+}): string {
+  const t = (en: string, zh: string): string => pickUiText(input.language, en, zh);
+  const errorBlock = input.errorMessage
+    ? `<div style="margin:0 0 12px 0;padding:10px 12px;border:1px solid #ef4444;border-radius:10px;background:#2a1215;color:#fecaca;">${escapeHtml(input.errorMessage)}</div>`
+    : "";
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(t("OpenClaw Control Center Login", "OpenClaw 控制中心登录"))}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:linear-gradient(160deg,#08111b,#102235 58%,#1c3141); color:#e8f2fb; font:16px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; }
+    .card { width:min(92vw,420px); padding:28px; border-radius:18px; border:1px solid rgba(138,210,255,0.22); background:rgba(8,17,27,0.86); box-shadow:0 20px 80px rgba(0,0,0,0.38); backdrop-filter:blur(10px); }
+    h1 { margin:0 0 8px 0; font-size:24px; }
+    p { margin:0 0 16px 0; color:#b9cadd; }
+    label { display:block; margin:0 0 6px 0; font-size:14px; color:#d7e4f1; }
+    input { width:100%; box-sizing:border-box; padding:12px 14px; border-radius:12px; border:1px solid rgba(138,210,255,0.24); background:#09131e; color:#f8fbff; }
+    button { width:100%; margin-top:14px; padding:12px 14px; border:0; border-radius:12px; background:#8ad2ff; color:#06233a; font-weight:700; cursor:pointer; }
+    .meta { margin-top:12px; font-size:13px; color:#9ab0c6; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/login">
+    <h1>${escapeHtml(t("Local Access Required", "需要本地访问令牌"))}</h1>
+    <p>${escapeHtml(t("This fork protects the local dashboard behind your local token.", "这个 fork 会用本地令牌保护控制台页面。"))}</p>
+    ${errorBlock}
+    <input type="hidden" name="next" value="${escapeHtml(input.next)}" />
+    <label for="localToken">${escapeHtml(t("Local token", "本地令牌"))}</label>
+    <input id="localToken" name="localToken" type="password" autocomplete="current-password" required />
+    <button type="submit">${escapeHtml(t("Enter Dashboard", "进入控制台"))}</button>
+    <div class="meta">${escapeHtml(t("Writes still require explicit token submission on protected mutation routes.", "写操作仍然需要在受保护变更接口上显式提交 token。"))}</div>
+  </form>
+</body>
+</html>`;
 }
 
 function readHeaderValue(req: IncomingMessage, name: string): string | undefined {

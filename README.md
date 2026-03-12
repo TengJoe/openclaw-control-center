@@ -4,6 +4,8 @@
 
 OpenClaw 的安全优先、本地优先控制中心。
 
+Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 UI 模式下避免启动时生成监控落盘产物。
+
 语言： [English](README.en.md) | **中文**
 
 ## 这个项目是做什么的

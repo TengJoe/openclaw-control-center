@@ -59,13 +59,20 @@ async function start(): Promise<void> {
     return;
   }
 
-  await runMonitorOnce(adapter);
+  const shouldPersistMonitorArtifacts = !(READONLY_MODE && UI_MODE);
+  if (shouldPersistMonitorArtifacts) {
+    await runMonitorOnce(adapter);
+  } else {
+    console.log("[mission-control] readonly ui startup skips monitor artifact writes");
+  }
 
-  if (CONTINUOUS_MODE) {
+  if (CONTINUOUS_MODE && shouldPersistMonitorArtifacts) {
     const intervalMs = monitorIntervalMs();
     setInterval(() => {
       void runMonitorOnce(adapter);
     }, intervalMs);
+  } else if (CONTINUOUS_MODE && !shouldPersistMonitorArtifacts) {
+    console.log("[mission-control] readonly ui startup skips continuous monitor writes");
   }
 
   if (UI_MODE) {
