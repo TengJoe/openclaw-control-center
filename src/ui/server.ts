@@ -6797,10 +6797,26 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .status-chip,
     body[data-ui-theme-resolved="dark"] .usage-chip,
     body[data-ui-theme-resolved="dark"] .cron-owner-card,
+    body[data-ui-theme-resolved="dark"] .cron-job-list li,
     body[data-ui-theme-resolved="dark"] .task-hub-stat,
     body[data-ui-theme-resolved="dark"] .calendar-day,
     body[data-ui-theme-resolved="dark"] .lane,
+    body[data-ui-theme-resolved="dark"] .task-chip,
     body[data-ui-theme-resolved="dark"] .project-chip,
+    body[data-ui-theme-resolved="dark"] .queue-item,
+    body[data-ui-theme-resolved="dark"] .readiness-chip,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .agent-avatar,
+    body[data-ui-theme-resolved="dark"] .timeline-stat,
+    body[data-ui-theme-resolved="dark"] .group-section,
+    body[data-ui-theme-resolved="dark"] .group-section summary,
+    body[data-ui-theme-resolved="dark"] .group-item,
+    body[data-ui-theme-resolved="dark"] .execution-chain-card,
+    body[data-ui-theme-resolved="dark"] .execution-chain-flow,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] .overview-action-item,
+    body[data-ui-theme-resolved="dark"] .overview-task-strip,
     body[data-ui-theme-resolved="dark"] .file-nav-item,
     body[data-ui-theme-resolved="dark"] .file-editor-panel,
     body[data-ui-theme-resolved="dark"] .brand,
@@ -6906,6 +6922,52 @@ async function renderHtml(
       background: linear-gradient(180deg, rgba(22, 42, 64, 0.98), rgba(17, 33, 49, 0.95));
       border-color: rgba(139, 196, 255, 0.3);
       color: #8bc4ff;
+    }
+    body[data-ui-theme-resolved="dark"] .badge.info,
+    body[data-ui-theme-resolved="dark"] .badge.in_progress,
+    body[data-ui-theme-resolved="dark"] .badge.active,
+    body[data-ui-theme-resolved="dark"] .badge.armed,
+    body[data-ui-theme-resolved="dark"] .badge.live,
+    body[data-ui-theme-resolved="dark"] .badge.spawned,
+    body[data-ui-theme-resolved="dark"] .badge.spawn {
+      color: #8bc4ff;
+      border-color: rgba(139, 196, 255, 0.28);
+      background: rgba(13, 34, 53, 0.96);
+    }
+    body[data-ui-theme-resolved="dark"] .badge.ok,
+    body[data-ui-theme-resolved="dark"] .badge.done,
+    body[data-ui-theme-resolved="dark"] .badge.enabled,
+    body[data-ui-theme-resolved="dark"] .badge.pass,
+    body[data-ui-theme-resolved="dark"] .badge.accepted {
+      color: #8fe0a9;
+      border-color: rgba(143, 224, 169, 0.22);
+      background: rgba(13, 39, 25, 0.96);
+    }
+    body[data-ui-theme-resolved="dark"] .badge.warn,
+    body[data-ui-theme-resolved="dark"] .badge.dry_run {
+      color: #f4d79a;
+      border-color: rgba(244, 215, 154, 0.22);
+      background: rgba(54, 36, 10, 0.96);
+    }
+    body[data-ui-theme-resolved="dark"] .badge.over,
+    body[data-ui-theme-resolved="dark"] .badge.blocked,
+    body[data-ui-theme-resolved="dark"] .badge.action-required,
+    body[data-ui-theme-resolved="dark"] .badge.critical,
+    body[data-ui-theme-resolved="dark"] .badge.fail,
+    body[data-ui-theme-resolved="dark"] .badge.blocked_no_token {
+      color: #ffb3ab;
+      border-color: rgba(255, 179, 171, 0.24);
+      background: rgba(56, 17, 18, 0.96);
+    }
+    body[data-ui-theme-resolved="dark"] .badge.todo,
+    body[data-ui-theme-resolved="dark"] .badge.planned,
+    body[data-ui-theme-resolved="dark"] .badge.message,
+    body[data-ui-theme-resolved="dark"] .badge.tool_event,
+    body[data-ui-theme-resolved="dark"] .badge.idle,
+    body[data-ui-theme-resolved="dark"] .badge.disabled {
+      color: #c9d5e3;
+      border-color: rgba(201, 213, 227, 0.18);
+      background: rgba(21, 32, 44, 0.96);
     }
     body[data-ui-theme-resolved="dark"] .empty-state {
       border-color: rgba(196, 137, 25, 0.3);
