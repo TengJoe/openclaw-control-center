@@ -315,7 +315,7 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(!source.includes("const taskCertaintySection = renderTaskCertaintySection(taskCertaintyCards, options.language);"));
   assert(!source.includes("${informationCertaintyCard}"));
   assert(!source.includes("${taskCertaintySection}"));
-  assert(source.includes('const usageCostMode: UsageCostMode = "full";'));
+  assert(source.includes('const usageCostMode: UsageCostMode = activeSection === "usage-cost" ? "full" : "summary";'));
   assert(source.includes("loadCachedUsageCost(snapshot, usageCostMode)"));
   assert(source.includes("loadCachedOfficeSessionPresence()"));
   assert(source.includes("loadCachedTaskEvidenceSessions("));

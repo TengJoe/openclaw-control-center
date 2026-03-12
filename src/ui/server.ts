@@ -3658,7 +3658,7 @@ async function renderHtml(
       : options.section === "calendar"
         ? "projects-tasks"
         : options.section;
-  const usageCostMode: UsageCostMode = "full";
+  const usageCostMode: UsageCostMode = activeSection === "usage-cost" ? "full" : "summary";
   const sectionMeta = sectionLinks.find((item) => item.key === activeSection) ?? sectionLinks[0];
   const sectionTitle = resolveDashboardSectionTitle(sectionMeta, options.language);
   const sectionLeadText =
