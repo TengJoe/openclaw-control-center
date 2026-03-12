@@ -12,7 +12,7 @@ const PUBLIC_FILES = [
   "docs/ARCHITECTURE.md",
   "docs/PROGRESS.md",
   "docs/mission-control-runbook-v2.md",
-  "ecosystem.config.cjs",
+  "docs/mission-control-template-v2.md",
   "scripts/run_verifier.sh",
   "scripts/mc_dod_evaluator.py",
   "scripts/mc_rollback_plan.py",
