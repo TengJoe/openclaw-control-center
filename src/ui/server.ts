@@ -6894,6 +6894,7 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .status-chip span,
     body[data-ui-theme-resolved="dark"] .brand-kicker,
     body[data-ui-theme-resolved="dark"] .meta-inline,
+    body[data-ui-theme-resolved="dark"] .staff-brief-row dt,
     body[data-ui-theme-resolved="dark"] small,
     body[data-ui-theme-resolved="dark"] label {
       color: #9fb3c8;
@@ -8028,6 +8029,7 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .pie-val,
     body[data-ui-theme-resolved="dark"] .office-info .topline strong,
     body[data-ui-theme-resolved="dark"] .staff-brief-identity h3,
+    body[data-ui-theme-resolved="dark"] .staff-brief-row dd,
     body[data-ui-theme-resolved="dark"] .staff-role,
     body[data-ui-theme-resolved="dark"] .agent-animal-label,
     body[data-ui-theme-resolved="dark"] .memory-day,
