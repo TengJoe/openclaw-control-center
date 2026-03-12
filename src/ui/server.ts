@@ -7741,6 +7741,141 @@ async function renderHtml(
     .pie-swatch { width: 10px; height: 10px; border-radius: 999px; }
     .pie-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pie-val { color: var(--muted); font-variant-numeric: tabular-nums; }
+    /* Final dark-theme pass after all light utility styles. */
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .pie-legend li,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-card,
+    body[data-ui-theme-resolved="dark"] .overview-action-item,
+    body[data-ui-theme-resolved="dark"] .overview-task-strip,
+    body[data-ui-theme-resolved="dark"] .status-chip,
+    body[data-ui-theme-resolved="dark"] .usage-chip,
+    body[data-ui-theme-resolved="dark"] .task-hub-stat,
+    body[data-ui-theme-resolved="dark"] .cron-owner-card,
+    body[data-ui-theme-resolved="dark"] .cron-job-list li,
+    body[data-ui-theme-resolved="dark"] .task-chip,
+    body[data-ui-theme-resolved="dark"] .project-chip,
+    body[data-ui-theme-resolved="dark"] .queue-item,
+    body[data-ui-theme-resolved="dark"] .readiness-chip,
+    body[data-ui-theme-resolved="dark"] .office-card,
+    body[data-ui-theme-resolved="dark"] .staff-brief-card,
+    body[data-ui-theme-resolved="dark"] .staff-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-avatar,
+    body[data-ui-theme-resolved="dark"] .agent-stage,
+    body[data-ui-theme-resolved="dark"] .timeline-stat,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-card,
+    body[data-ui-theme-resolved="dark"] .summary-gauge-card,
+    body[data-ui-theme-resolved="dark"] .group-section,
+    body[data-ui-theme-resolved="dark"] .group-section summary,
+    body[data-ui-theme-resolved="dark"] .group-item,
+    body[data-ui-theme-resolved="dark"] .execution-chain-card,
+    body[data-ui-theme-resolved="dark"] .execution-chain-flow,
+    body[data-ui-theme-resolved="dark"] .doc-card,
+    body[data-ui-theme-resolved="dark"] .memory-row,
+    body[data-ui-theme-resolved="dark"] .file-sidebar,
+    body[data-ui-theme-resolved="dark"] .file-editor-panel,
+    body[data-ui-theme-resolved="dark"] .file-nav-item,
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select,
+    body[data-ui-theme-resolved="dark"] .filters select,
+    body[data-ui-theme-resolved="dark"] .filters input,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .btn,
+    body[data-ui-theme-resolved="dark"] .compact-table-details summary,
+    body[data-ui-theme-resolved="dark"] .compact-table-details summary::after,
+    body[data-ui-theme-resolved="dark"] .card.compact-details summary::after {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.98), rgba(17, 31, 46, 0.96)) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .agent-stage {
+      background:
+        linear-gradient(180deg, rgba(12, 22, 34, 0.92), rgba(16, 30, 46, 0.88)),
+        repeating-linear-gradient(
+          0deg,
+          rgba(186, 204, 224, 0.06) 0px,
+          rgba(186, 204, 224, 0.06) 1px,
+          transparent 1px,
+          transparent 8px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          rgba(186, 204, 224, 0.06) 0px,
+          rgba(186, 204, 224, 0.06) 1px,
+          transparent 1px,
+          transparent 8px
+        ) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .file-editor-textarea,
+    body[data-ui-theme-resolved="dark"] .file-filter-input,
+    body[data-ui-theme-resolved="dark"] .file-token-input,
+    body[data-ui-theme-resolved="dark"] .docs-search input,
+    body[data-ui-theme-resolved="dark"] .docs-source-filter-wrap select,
+    body[data-ui-theme-resolved="dark"] .filters select,
+    body[data-ui-theme-resolved="dark"] .filters input {
+      color: #eef5fb !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .overview-kpi-label,
+    body[data-ui-theme-resolved="dark"] .overview-kpi-detail,
+    body[data-ui-theme-resolved="dark"] .overview-action-item span,
+    body[data-ui-theme-resolved="dark"] .overview-action-item small,
+    body[data-ui-theme-resolved="dark"] .overview-busy-copy,
+    body[data-ui-theme-resolved="dark"] .lane-count,
+    body[data-ui-theme-resolved="dark"] .timeline-stat span,
+    body[data-ui-theme-resolved="dark"] .timeline-stat small,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta small,
+    body[data-ui-theme-resolved="dark"] .status-chip span,
+    body[data-ui-theme-resolved="dark"] .file-nav-meta,
+    body[data-ui-theme-resolved="dark"] .memory-day,
+    body[data-ui-theme-resolved="dark"] .pie-hole span,
+    body[data-ui-theme-resolved="dark"] .pie-val,
+    body[data-ui-theme-resolved="dark"] .quota-value,
+    body[data-ui-theme-resolved="dark"] .quota-foot,
+    body[data-ui-theme-resolved="dark"] .staff-role,
+    body[data-ui-theme-resolved="dark"] .agent-animal-label,
+    body[data-ui-theme-resolved="dark"] .meta,
+    body[data-ui-theme-resolved="dark"] .meta-inline {
+      color: #a8b9cb !important;
+    }
+    body[data-ui-theme-resolved="dark"] .overview-kpi-value,
+    body[data-ui-theme-resolved="dark"] .overview-action-item strong,
+    body[data-ui-theme-resolved="dark"] .decision-row-copy strong,
+    body[data-ui-theme-resolved="dark"] .decision-row-value,
+    body[data-ui-theme-resolved="dark"] .decision-row-link,
+    body[data-ui-theme-resolved="dark"] .exec-metric,
+    body[data-ui-theme-resolved="dark"] .lane h3,
+    body[data-ui-theme-resolved="dark"] .group-section summary,
+    body[data-ui-theme-resolved="dark"] .group-item-head strong,
+    body[data-ui-theme-resolved="dark"] .cron-owner-head h3,
+    body[data-ui-theme-resolved="dark"] .cron-job-head strong,
+    body[data-ui-theme-resolved="dark"] .timeline-stat strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-core strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta a,
+    body[data-ui-theme-resolved="dark"] .file-nav-title,
+    body[data-ui-theme-resolved="dark"] .file-editor-title,
+    body[data-ui-theme-resolved="dark"] .task-hub-stat strong,
+    body[data-ui-theme-resolved="dark"] .usage-chip strong,
+    body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip strong,
+    body[data-ui-theme-resolved="dark"] .status-chip strong,
+    body[data-ui-theme-resolved="dark"] .quota-label,
+    body[data-ui-theme-resolved="dark"] .pie-hole strong,
+    body[data-ui-theme-resolved="dark"] .pie-name,
+    body[data-ui-theme-resolved="dark"] .office-info .topline strong,
+    body[data-ui-theme-resolved="dark"] .staff-brief-identity h3,
+    body[data-ui-theme-resolved="dark"] .memory-title,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item,
+    body[data-ui-theme-resolved="dark"] .file-facet-switch .segment-item.active,
+    body[data-ui-theme-resolved="dark"] .btn,
+    body[data-ui-theme-resolved="dark"] .compact-table-details summary,
+    body[data-ui-theme-resolved="dark"] .compact-table-details summary::after,
+    body[data-ui-theme-resolved="dark"] .card.compact-details summary::after {
+      color: #eef5fb !important;
+    }
     @keyframes card-in {
       from { opacity: 0; transform: translateY(7px); }
       to { opacity: 1; transform: translateY(0); }
