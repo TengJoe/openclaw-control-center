@@ -8077,6 +8077,31 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip strong {
       color: #eef5fb !important;
     }
+    body[data-ui-theme-resolved="dark"] #usage-pulse .usage-chip,
+    body[data-ui-theme-resolved="dark"] .subscription-pill,
+    body[data-ui-theme-resolved="dark"] .quota-row,
+    body[data-ui-theme-resolved="dark"] .pie-hole,
+    body[data-ui-theme-resolved="dark"] .pie-legend li {
+      background: linear-gradient(180deg, rgba(13, 24, 36, 0.98), rgba(17, 31, 46, 0.96)) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+      box-shadow: 0 14px 30px rgba(2, 8, 14, 0.24) !important;
+    }
+    body[data-ui-theme-resolved="dark"] .quota-track,
+    body[data-ui-theme-resolved="dark"] .summary-track,
+    body[data-ui-theme-resolved="dark"] .bar-track {
+      background: rgba(42, 59, 78, 0.92) !important;
+      border-color: rgba(132, 164, 201, 0.18) !important;
+    }
+    body[data-ui-theme-resolved="dark"] #usage-pulse .usage-chip strong,
+    body[data-ui-theme-resolved="dark"] .quota-label,
+    body[data-ui-theme-resolved="dark"] .quota-value,
+    body[data-ui-theme-resolved="dark"] .quota-foot,
+    body[data-ui-theme-resolved="dark"] .pie-hole strong,
+    body[data-ui-theme-resolved="dark"] .pie-hole span,
+    body[data-ui-theme-resolved="dark"] .pie-name,
+    body[data-ui-theme-resolved="dark"] .pie-val {
+      color: #eef5fb !important;
+    }
   </style>
 </head>
 <body class="ui-preload" data-ui-polish="apple-native-v3" data-apple-window-controls="true" data-ui-language="${escapeHtml(options.language)}" data-ui-theme="auto" data-ui-theme-resolved="light" style="--fold-open-label:${options.language === "en" ? "'Expand'" : "'展开'"}; --fold-close-label:${options.language === "en" ? "'Collapse'" : "'收起'"};">
