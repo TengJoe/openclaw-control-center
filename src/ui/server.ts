@@ -3675,6 +3675,9 @@ async function renderHtml(
         : sectionMeta.blurb;
   const needsSessionPreview = activeSection === "projects-tasks";
   const needsTaskEvidence = activeSection === "projects-tasks";
+  const needsReplayPreview = activeSection === "replay-audit";
+  const needsTaskCertainty = activeSection === "projects-tasks" || activeSection === "overview";
+  const needsGlobalVisibility = activeSection === "overview";
   const needsTeamSnapshot = activeSection === "team";
   const needsMemoryFiles = activeSection === "memory";
   const needsWorkspaceFiles = activeSection === "docs";
@@ -3709,7 +3712,24 @@ async function renderHtml(
   const [cronOverview, openclawCronJobs, replayPreview, usageCost, officeRoster, officePresence] = await Promise.all([
     buildCronOverview(snapshot, POLLING_INTERVALS_MS.cron),
     loadOpenclawCronCatalog(options.language),
-    loadCachedReplayPreview(),
+    needsReplayPreview
+      ? loadCachedReplayPreview()
+      : Promise.resolve(
+          {
+            generatedAt: snapshot.generatedAt,
+            timeline: { path: "", totalLines: 0, entries: [] },
+            digests: [],
+            exportSnapshots: [],
+            exportBundles: [],
+            stats: {
+              timeline: { total: 0, returned: 0, filteredOut: 0, filteredOutByWindow: 0, filteredOutByLimit: 0, latencyMs: 0, latencyBucketsMs: { p50: 0, p95: 0 }, totalSizeBytes: 0, returnedSizeBytes: 0 },
+              digests: { total: 0, returned: 0, filteredOut: 0, filteredOutByWindow: 0, filteredOutByLimit: 0, latencyMs: 0, latencyBucketsMs: { p50: 0, p95: 0 }, totalSizeBytes: 0, returnedSizeBytes: 0 },
+              exportSnapshots: { total: 0, returned: 0, filteredOut: 0, filteredOutByWindow: 0, filteredOutByLimit: 0, latencyMs: 0, latencyBucketsMs: { p50: 0, p95: 0 }, totalSizeBytes: 0, returnedSizeBytes: 0 },
+              exportBundles: { total: 0, returned: 0, filteredOut: 0, filteredOutByWindow: 0, filteredOutByLimit: 0, latencyMs: 0, latencyBucketsMs: { p50: 0, p95: 0 }, totalSizeBytes: 0, returnedSizeBytes: 0 },
+              total: { total: 0, returned: 0, filteredOut: 0, filteredOutByWindow: 0, filteredOutByLimit: 0, latencyMs: 0, latencyBucketsMs: { p50: 0, p95: 0 }, totalSizeBytes: 0, returnedSizeBytes: 0 },
+            },
+          } as Awaited<ReturnType<typeof loadReplayIndex>>,
+        ),
     loadCachedUsageCost(snapshot, usageCostMode),
     loadBestEffortAgentRoster(),
     loadCachedOfficeSessionPresence(),
@@ -3759,19 +3779,23 @@ async function renderHtml(
     usageAgentTokensByKey,
   );
   const taskSignalItems = mergeSessionConversationItems(taskEvidenceItems, sessionPreview.items);
-  const taskExecutionChainCards = buildTaskExecutionChainCards({
-    tasks: realTasks,
-    sessions: snapshot.sessions,
-    sessionItems: taskSignalItems,
-    language: options.language,
-  });
-  const taskCertaintyCards = buildTaskCertaintyCards({
-    tasks,
-    sessions: snapshot.sessions,
-    sessionItems: taskSignalItems,
-    approvals: snapshot.approvals,
-    language: options.language,
-  });
+  const taskExecutionChainCards = needsTaskCertainty
+    ? buildTaskExecutionChainCards({
+        tasks: realTasks,
+        sessions: snapshot.sessions,
+        sessionItems: taskSignalItems,
+        language: options.language,
+      })
+    : [];
+  const taskCertaintyCards = needsTaskCertainty
+    ? buildTaskCertaintyCards({
+        tasks,
+        sessions: snapshot.sessions,
+        sessionItems: taskSignalItems,
+        approvals: snapshot.approvals,
+        language: options.language,
+      })
+    : [];
   const taskCertaintyStrongCount = taskCertaintyCards.filter((item) => item.tone === "ok").length;
   const taskCertaintyFollowupCount = taskCertaintyCards.filter((item) => item.tone === "warn").length;
   const taskCertaintyWeakCount = taskCertaintyCards.filter((item) => item.tone === "blocked").length;
@@ -3794,14 +3818,27 @@ async function renderHtml(
   const runtimeSessionIssueCount = sessionBlockedCount + sessionErrorCount + sessionWaitingApprovalCount;
   const stalledRunningSessionCount = countStalledRunningSessions(snapshot.sessions, taskSignalItems, nowMs);
   const runtimeIssueCount = runtimeSessionIssueCount + stalledRunningSessionCount;
-  const globalVisibilityModel = await buildGlobalVisibilityViewModel(snapshot, toolClient, options.language, {
-    cronOverview,
-    openclawCronJobs,
-    currentTasksCount: taskCertaintyCards.length,
-    strongTaskEvidenceCount: taskCertaintyStrongCount,
-    followupTaskEvidenceCount: taskCertaintyFollowupCount,
-    weakTaskEvidenceCount: taskCertaintyWeakCount,
-  });
+  const globalVisibilityModel = needsGlobalVisibility
+    ? await buildGlobalVisibilityViewModel(snapshot, toolClient, options.language, {
+        cronOverview,
+        openclawCronJobs,
+        currentTasksCount: taskCertaintyCards.length,
+        strongTaskEvidenceCount: taskCertaintyStrongCount,
+        followupTaskEvidenceCount: taskCertaintyFollowupCount,
+        weakTaskEvidenceCount: taskCertaintyWeakCount,
+      })
+    : {
+        tasks: [],
+        doneCount: 0,
+        notDoneCount: 0,
+        noTaskMessage: pickUiText(options.language, "No current signal.", "暂无当前信号。"),
+        signalCounts: {
+          schedule: cronOverview.jobs.length,
+          heartbeat: cronOverview.jobs.filter((job) => job.jobId.toLowerCase().includes("heartbeat")).length,
+          currentTasks: tasks.length,
+          toolCalls: 0,
+        },
+      };
   const attentionCount = actionQueue.counts.unacked + runtimeIssueCount + nonOkBudgets.length;
   const replayMoments = replayPreview.timeline.entries.slice(0, 8);
   const replaySignals = [
