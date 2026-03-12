@@ -6824,13 +6824,34 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] h3,
     body[data-ui-theme-resolved="dark"] .section-title,
     body[data-ui-theme-resolved="dark"] .nav-link span,
+    body[data-ui-theme-resolved="dark"] .panel-toggle,
+    body[data-ui-theme-resolved="dark"] .theme-toggle .segment-item,
+    body[data-ui-theme-resolved="dark"] .quick-chip,
     body[data-ui-theme-resolved="dark"] .overview-primary-value,
     body[data-ui-theme-resolved="dark"] .overview-focus-headline,
     body[data-ui-theme-resolved="dark"] .overview-focus-score,
     body[data-ui-theme-resolved="dark"] .overview-busy-head strong,
     body[data-ui-theme-resolved="dark"] .overview-kpi-value,
+    body[data-ui-theme-resolved="dark"] .overview-action-item strong,
+    body[data-ui-theme-resolved="dark"] .decision-row-copy strong,
+    body[data-ui-theme-resolved="dark"] .decision-row-value,
+    body[data-ui-theme-resolved="dark"] .decision-row-link,
+    body[data-ui-theme-resolved="dark"] .overview-task-metric,
+    body[data-ui-theme-resolved="dark"] .exec-metric,
+    body[data-ui-theme-resolved="dark"] .lane h3,
+    body[data-ui-theme-resolved="dark"] .group-section summary,
+    body[data-ui-theme-resolved="dark"] .group-item-head strong,
+    body[data-ui-theme-resolved="dark"] .cron-owner-head h3,
+    body[data-ui-theme-resolved="dark"] .cron-job-head strong,
+    body[data-ui-theme-resolved="dark"] .timeline-stat strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-core strong,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta a,
+    body[data-ui-theme-resolved="dark"] .file-nav-title,
+    body[data-ui-theme-resolved="dark"] .file-editor-title,
     body[data-ui-theme-resolved="dark"] .task-hub-stat strong,
     body[data-ui-theme-resolved="dark"] .usage-chip strong,
+    body[data-ui-theme-resolved="dark"] .overview-pulse-card .status-chip strong,
+    body[data-ui-theme-resolved="dark"] .status-chip strong,
     body[data-ui-theme-resolved="dark"] .card h2,
     body[data-ui-theme-resolved="dark"] strong {
       color: #eef5fb;
@@ -6842,6 +6863,17 @@ async function renderHtml(
     body[data-ui-theme-resolved="dark"] .overview-focus-sub,
     body[data-ui-theme-resolved="dark"] .overview-focus-meta,
     body[data-ui-theme-resolved="dark"] .overview-primary-label,
+    body[data-ui-theme-resolved="dark"] .overview-focus-unit,
+    body[data-ui-theme-resolved="dark"] .overview-action-item span,
+    body[data-ui-theme-resolved="dark"] .overview-action-item small,
+    body[data-ui-theme-resolved="dark"] .overview-busy-head span,
+    body[data-ui-theme-resolved="dark"] .overview-busy-copy,
+    body[data-ui-theme-resolved="dark"] .lane-count,
+    body[data-ui-theme-resolved="dark"] .timeline-stat span,
+    body[data-ui-theme-resolved="dark"] .timeline-stat small,
+    body[data-ui-theme-resolved="dark"] .signal-gauge-meta small,
+    body[data-ui-theme-resolved="dark"] .status-chip span,
+    body[data-ui-theme-resolved="dark"] .brand-kicker,
     body[data-ui-theme-resolved="dark"] .meta-inline,
     body[data-ui-theme-resolved="dark"] small,
     body[data-ui-theme-resolved="dark"] label {
@@ -6874,6 +6906,11 @@ async function renderHtml(
       background: linear-gradient(180deg, rgba(22, 42, 64, 0.98), rgba(17, 33, 49, 0.95));
       border-color: rgba(139, 196, 255, 0.3);
       color: #8bc4ff;
+    }
+    body[data-ui-theme-resolved="dark"] .empty-state {
+      border-color: rgba(196, 137, 25, 0.3);
+      background: rgba(54, 36, 10, 0.42);
+      color: #f4d79a;
     }
     .segment-item {
       -webkit-appearance: none;
