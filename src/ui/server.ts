@@ -8084,7 +8084,7 @@ async function renderHtml(
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-kicker">OpenClaw</div>
-        <h1>OpenClaw Control Center</h1>
+        <h1>${escapeHtml(t("OpenClaw Control Center", "OpenClaw看台"))}</h1>
         <div class="meta">${escapeHtml(t("Updated", "更新时间"))}${escapeHtml(options.language === "en" ? ": " : "：")}${escapeHtml(snapshot.generatedAt ?? t("Not available", "暂无"))}</div>
         ${languageToggle}
         ${themeToggle}
