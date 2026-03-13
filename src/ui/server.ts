@@ -5267,6 +5267,67 @@ async function renderHtml(
       font-size: 12px;
       color: var(--muted);
     }
+    .lang-toggle {
+      display: grid;
+      gap: 8px;
+      align-items: start;
+    }
+    .topbar-language-mode {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 5px;
+      width: fit-content;
+      border: 1px solid rgba(126, 147, 177, 0.16);
+      border-radius: 26px;
+      background: color-mix(in srgb, rgba(18, 24, 36, 0.92) 70%, transparent);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 12px 28px rgba(9, 14, 24, 0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .topbar-language-mode__btn {
+      min-width: 54px;
+      height: 38px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(213, 224, 238, 0.74);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease;
+    }
+    .topbar-language-mode__btn:hover {
+      text-decoration: none;
+      color: rgba(245, 248, 252, 0.92);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .topbar-language-mode__btn:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+    .topbar-language-mode__btn--active {
+      border-color: color-mix(in srgb, #6fb4ff 28%, transparent);
+      background:
+        linear-gradient(180deg, rgba(20, 43, 74, 0.96), rgba(14, 32, 55, 0.98)),
+        radial-gradient(circle at 50% 50%, rgba(116, 181, 255, 0.15), transparent 56%);
+      color: #8cc4ff;
+      box-shadow:
+        0 0 0 2px rgba(102, 170, 255, 0.14),
+        0 10px 24px rgba(18, 52, 90, 0.28),
+        inset 0 0 0 1px rgba(151, 204, 255, 0.18);
+    }
     .topbar-theme-mode {
       display: inline-flex;
       align-items: center;
@@ -9613,11 +9674,17 @@ function hasAnyQueryKey(searchParams: URLSearchParams, keys: string[]): boolean 
 function renderLanguageToggle(filters: TaskQueryFilters, options: DashboardOptions): string {
   const enHref = buildHomeHref(filters, options.compactStatusStrip, options.section, "en", options.usageView);
   const zhHref = buildHomeHref(filters, options.compactStatusStrip, options.section, "zh", options.usageView);
-  const enClass = options.language === "en" ? " class=\"active\"" : "";
-  const zhClass = options.language === "zh" ? " class=\"active\"" : "";
   const label = pickUiText(options.language, "Language:", "语言：");
   const zhLabel = pickUiText(options.language, "中文", "中文");
-  return `<div class="meta lang-toggle">${label} <a${enClass} href="${escapeHtml(enHref)}">EN</a> / <a${zhClass} href="${escapeHtml(zhHref)}">${zhLabel}</a></div>`;
+  const enClass = options.language === "en" ? " topbar-language-mode__btn--active" : "";
+  const zhClass = options.language === "zh" ? " topbar-language-mode__btn--active" : "";
+  return `<div class="lang-toggle" data-language-toggle>
+    <div class="theme-toggle-label">${escapeHtml(label)}</div>
+    <div class="topbar-language-mode" role="group" aria-label="${escapeHtml(label)}">
+      <a class="topbar-language-mode__btn${enClass}" href="${escapeHtml(enHref)}" aria-current="${options.language === "en" ? "page" : "false"}">EN</a>
+      <a class="topbar-language-mode__btn${zhClass}" href="${escapeHtml(zhHref)}" aria-current="${options.language === "zh" ? "page" : "false"}">${escapeHtml(zhLabel)}</a>
+    </div>
+  </div>`;
 }
 
 function renderThemeToggle(language: UiLanguage): string {
