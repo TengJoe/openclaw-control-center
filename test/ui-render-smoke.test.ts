@@ -358,6 +358,9 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(!source.includes('state: item.active ? "running" : "idle"'));
   assert(usageSource.includes("const USAGE_SOURCE_CACHE_TTL_MS = 10_000;"));
   assert(usageSource.includes("loadCachedRuntimeUsageData()"));
+  assert(usageSource.includes("const [digests, runtimeUsage, subscriptionUsage, cronJobNameMap] = await Promise.all(["));
+  assert(usageSource.includes("return computeUsageCostSnapshot(snapshot, digests, [], runtimeUsage, subscriptionUsage, cronJobNameMap);"));
+  assert(!usageSource.includes("loadCachedSubscriptionUsage({ includeCodexTelemetry: false })"));
   assert(usageSource.includes("loadCachedSubscriptionUsage()"));
   assert(source.includes('t("See four signals in overview", "在总览查看四项信号")'));
   assert(source.includes('t("Data source not connected", "数据源未连接")'));

@@ -376,11 +376,13 @@ export async function buildUsageCostSnapshot(
   mode: UsageCostMode = "full",
 ): Promise<UsageCostSnapshot> {
   if (mode === "summary") {
-    const [digests, subscriptionUsage] = await Promise.all([
+    const [digests, runtimeUsage, subscriptionUsage, cronJobNameMap] = await Promise.all([
       loadCachedUsageDigests(),
-      loadCachedSubscriptionUsage({ includeCodexTelemetry: false }),
+      loadCachedRuntimeUsageData(),
+      loadCachedSubscriptionUsage(),
+      loadCachedOpenclawCronJobNameMap(),
     ]);
-    return computeUsageCostSnapshot(snapshot, digests, [], undefined, subscriptionUsage, new Map());
+    return computeUsageCostSnapshot(snapshot, digests, [], runtimeUsage, subscriptionUsage, cronJobNameMap);
   }
 
   const [digests, modelCatalog, runtimeUsage, subscriptionUsage, cronJobNameMap] = await Promise.all([
