@@ -70,6 +70,7 @@ const INACTIVE_SESSION_STATES = new Set([
   "canceled",
 ]);
 const FALLBACK_ACTIVE_RECENCY_WINDOW_MS = 45 * 60 * 1000;
+const SLOW_METADATA_CACHE_TTL_MS = 30_000;
 
 /**
  * Live read client using official OpenClaw CLI JSON outputs.
@@ -80,6 +81,10 @@ export class OpenClawLiveClient implements ToolClient {
   private sessionFileCache = new Map<string, string>();
   private sessionHistoryCliSupported: boolean | undefined;
   private sessionHistoryCliSupportInFlight: Promise<boolean> | undefined;
+  private cronListCache: { value: CronListResponse; expiresAt: number } | undefined;
+  private cronListInFlight: Promise<CronListResponse> | undefined;
+  private approvalsCache: { value: ApprovalsGetResponse; expiresAt: number } | undefined;
+  private approvalsInFlight: Promise<ApprovalsGetResponse> | undefined;
 
   constructor(private readonly deps: OpenClawLiveClientDeps = {}) {}
 
@@ -201,47 +206,91 @@ export class OpenClawLiveClient implements ToolClient {
   }
 
   async cronList(): Promise<CronListResponse> {
-    let data: { jobs?: Array<Record<string, unknown>> };
-    try {
-      data = await runJson<{ jobs?: Array<Record<string, unknown>> }>(
-        ["cron", "list", "--json"],
-        { timeoutMs: 2_500 },
-      );
-    } catch {
-      return { jobs: [] };
+    const now = Date.now();
+    if (this.cronListCache && this.cronListCache.expiresAt > now) {
+      return this.cronListCache.value;
+    }
+    if (this.cronListInFlight) {
+      return this.cronListInFlight;
     }
 
-    const jobs = (data.jobs ?? []).map((job) => ({
-      id: asString(job.id),
-      name: asString(job.name),
-      enabled: asBoolean(job.enabled),
-      state: asObject(job.state)
-        ? {
-            nextRunAtMs: asNumber(asObject(job.state)?.nextRunAtMs),
-          }
-        : undefined,
-    }));
+    const nextValue = (async () => {
+      let data: { jobs?: Array<Record<string, unknown>> };
+      try {
+        data = await runJson<{ jobs?: Array<Record<string, unknown>> }>(
+          ["cron", "list", "--json"],
+          { timeoutMs: 2_500 },
+        );
+      } catch {
+        const value = { jobs: [] };
+        this.cronListCache = { value, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+        return value;
+      }
 
-    return { jobs };
+      const value = {
+        jobs: (data.jobs ?? []).map((job) => ({
+          id: asString(job.id),
+          name: asString(job.name),
+          enabled: asBoolean(job.enabled),
+          state: asObject(job.state)
+            ? {
+                nextRunAtMs: asNumber(asObject(job.state)?.nextRunAtMs),
+              }
+            : undefined,
+        })),
+      };
+      this.cronListCache = { value, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+      return value;
+    })();
+
+    this.cronListInFlight = nextValue;
+    try {
+      return await nextValue;
+    } finally {
+      this.cronListInFlight = undefined;
+    }
   }
 
   async approvalsGet(): Promise<ApprovalsGetResponse> {
-    try {
-      const json = await runJson<Record<string, unknown>>(
-        ["approvals", "get", "--json"],
-        { timeoutMs: 2_500 },
-      );
-      return {
-        json,
-        rawText: JSON.stringify(json),
-      };
-    } catch {
+    const now = Date.now();
+    if (this.approvalsCache && this.approvalsCache.expiresAt > now) {
+      return this.approvalsCache.value;
+    }
+    if (this.approvalsInFlight) {
+      return this.approvalsInFlight;
+    }
+
+    const nextValue = (async () => {
       try {
-        const rawText = await runText(["approvals", "get"], { timeoutMs: 1_500 });
-        return { rawText };
+        const json = await runJson<Record<string, unknown>>(
+          ["approvals", "get", "--json"],
+          { timeoutMs: 2_500 },
+        );
+        const value = {
+          json,
+          rawText: JSON.stringify(json),
+        };
+        this.approvalsCache = { value, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+        return value;
       } catch {
-        return { rawText: "" };
+        try {
+          const rawText = await runText(["approvals", "get"], { timeoutMs: 1_500 });
+          const value = { rawText };
+          this.approvalsCache = { value, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+          return value;
+        } catch {
+          const value = { rawText: "" };
+          this.approvalsCache = { value, expiresAt: Date.now() + SLOW_METADATA_CACHE_TTL_MS };
+          return value;
+        }
       }
+    })();
+
+    this.approvalsInFlight = nextValue;
+    try {
+      return await nextValue;
+    } finally {
+      this.approvalsInFlight = undefined;
     }
   }
 
