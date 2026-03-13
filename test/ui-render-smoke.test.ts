@@ -362,6 +362,8 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(usageSource.includes("return computeUsageCostSnapshot(snapshot, digests, [], runtimeUsage, subscriptionUsage, cronJobNameMap);"));
   assert(!usageSource.includes("loadCachedSubscriptionUsage({ includeCodexTelemetry: false })"));
   assert(usageSource.includes("loadCachedSubscriptionUsage()"));
+  assert(source.includes('id="fork-intro-card"'));
+  assert(source.includes('t("What changed in this fork", "这个 Fork 改了什么")'));
   assert(source.includes('t("See four signals in overview", "在总览查看四项信号")'));
   assert(source.includes('t("Data source not connected", "数据源未连接")'));
   assert(source.includes('t("Recent usage", "近期用量")'));

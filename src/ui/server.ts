@@ -4197,6 +4197,54 @@ async function renderHtml(
       </div>`,
     )
     .join("");
+  const forkHighlightRows = [
+    {
+      title: t("Unified usage truth source", "统一用量真相源"),
+      detail: t(
+        "Overview and Usage now read the same runtime and subscription inputs, so today and 7d usage no longer drift between summary cards and the detail page.",
+        "总览和用量页现在读取同一套 runtime 与 subscription 输入，今天和 7 天用量不再出现摘要卡片与详情页口径漂移。",
+      ),
+      href: usageDetailHref,
+      action: t("Open usage", "查看用量"),
+    },
+    {
+      title: t("Stricter localhost boundary", "更严格的本地鉴权边界"),
+      detail: t(
+        "This fork keeps local-token auth on by default, limits risky mutation routes, and makes readonly mode the safer starting posture for local operators.",
+        "这个 fork 默认开启本地 token 鉴权、限制高风险写操作，并把只读模式作为更安全的本地起步姿态。",
+      ),
+      href: buildHomeHref({ quick: "all" }, options.compactStatusStrip, "settings", options.language, options.usageView),
+      action: t("Open settings", "查看设置"),
+    },
+    {
+      title: t("Operator-first homepage", "更偏运营视角的首页"),
+      detail: t(
+        "The homepage now emphasizes control posture, intervention queue, active staff, runtime checkpoints, and AI burn so non-technical users can decide from one screen.",
+        "首页现在优先展示总控态势、介入队列、谁在忙、运行检查点和 AI 用量，让非技术用户能在一个页面里做判断。",
+      ),
+      href: staffHubHref,
+      action: t("Open staff", "查看员工"),
+    },
+    {
+      title: t("Added source-backed workbenches", "新增源文件工作台"),
+      detail: t(
+        "Documents and Memory sections were added so operators can inspect active agent files without leaving the control center.",
+        "新增了文档与记忆工作台，方便直接在控制中心里查看活跃 agent 的源文件和记忆内容。",
+      ),
+      href: buildHomeHref({ quick: "all" }, options.compactStatusStrip, "docs", options.language, options.usageView),
+      action: t("Open docs", "查看文档"),
+    },
+  ]
+    .map(
+      (item) => `<a class="decision-row" href="${escapeHtml(item.href)}">
+        <div class="decision-row-copy">
+          <strong>${escapeHtml(item.title)}</strong>
+          <div class="meta">${escapeHtml(item.detail)}</div>
+        </div>
+        <div class="decision-row-link">${escapeHtml(item.action)}</div>
+      </a>`,
+    )
+    .join("");
   const overviewBusyAgents = executionAgentSummaries
     .filter((item) => item.activeSessions > 0 || item.activeTasks > 0 || item.enabledCronJobs > 0)
     .sort((a, b) => b.activeTasks - a.activeTasks || b.activeSessions - a.activeSessions || b.enabledCronJobs - a.enabledCronJobs)
@@ -4390,6 +4438,21 @@ async function renderHtml(
         ${overviewRuntimeRowsHtml}
       </article>
     </section>
+    <article class="card" id="fork-intro-card">
+      <div class="overview-command-head">
+        <div>
+          <h2>${escapeHtml(t("What changed in this fork", "这个 Fork 改了什么"))}</h2>
+          <div class="meta">${escapeHtml(
+            t(
+              "This homepage calls out the fork-specific fixes and additions so you can see what changed without opening the README first.",
+              "首页直接说明这个 fork 额外修了什么、增加了什么，不用先翻 README 才知道差异。",
+            ),
+          )}</div>
+        </div>
+        <a class="btn" href="${escapeHtml(usageDetailHref)}">${escapeHtml(t("See changed areas", "查看改动区域"))}</a>
+      </div>
+      <div class="decision-list">${forkHighlightRows}</div>
+    </article>
     <details class="card compact-details overview-secondary-shell" id="overview-secondary-shell">
       <summary>${escapeHtml(t("Expand runtime detail", "展开运行细节"))}</summary>
       <div class="fold-body">

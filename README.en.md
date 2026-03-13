@@ -8,6 +8,24 @@ Fork note: this fork adds stricter localhost auth boundaries and avoids startup 
 
 Language: **English** | [中文](README.md)
 
+## What This Fork Changes
+- Fixes the correctness gap between `Overview` and `Usage`:
+  - both now share the same runtime/subscription truth source, so homepage summary cards and the detailed usage page no longer drift apart
+- Hardens the local safety defaults:
+  - local-token auth on by default
+  - readonly first
+  - high-risk mutation routes disabled by default
+- Reworks the homepage for operators:
+  - the landing page now emphasizes control posture, intervention queue, active staff, runtime checkpoints, and AI burn
+  - this makes the first screen more useful for non-technical operators making quick decisions
+- Adds more explainable usage views:
+  - the `Usage` page keeps one consistent today / 7d / 30d lens
+  - attribution can be drilled into by agent, task, model, and session type
+- Adds source-backed workbenches:
+  - `Documents` and `Memory` expose active-agent file scopes directly inside the control center
+- Stays upstream-aligned:
+  - this fork is still meant to track upstream, but with stronger local operations, safer defaults, and clearer operator-facing UX
+
 ## Why this exists
 - One local place to see whether OpenClaw is healthy, busy, blocked, or drifting.
 - Built for non-technical operators who need observability and certainty, not raw backend payloads.
