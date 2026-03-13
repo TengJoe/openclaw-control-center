@@ -4197,52 +4197,72 @@ async function renderHtml(
       </div>`,
     )
     .join("");
-  const forkHighlightRows = [
+  const forkReleaseCardsHtml = [
     {
-      title: t("Unified usage truth source", "统一用量真相源"),
-      detail: t(
-        "Overview and Usage now read the same runtime and subscription inputs, so today and 7d usage no longer drift between summary cards and the detail page.",
-        "总览和用量页现在读取同一套 runtime 与 subscription 输入，今天和 7 天用量不再出现摘要卡片与详情页口径漂移。",
+      eyebrow: t("Fixed", "修复"),
+      title: t("Usage numbers now stay aligned", "用量数字现在保持一致"),
+      summary: t(
+        "Overview and Usage now read the same runtime and subscription truth source.",
+        "总览和用量页现在读取同一套 runtime 与 subscription 真相源。",
       ),
+      bullets: [
+        t("Today and 7d values no longer drift between homepage summary cards and the detail page.", "今天和 7 天用量不再出现首页摘要卡片与详情页数字对不上。"),
+        t("Usage, cost, and request counts now follow one shared calculation path.", "用量、费用和请求数现在走同一条共享计算链路。"),
+      ],
       href: usageDetailHref,
       action: t("Open usage", "查看用量"),
     },
     {
-      title: t("Stricter localhost boundary", "更严格的本地鉴权边界"),
-      detail: t(
-        "This fork keeps local-token auth on by default, limits risky mutation routes, and makes readonly mode the safer starting posture for local operators.",
-        "这个 fork 默认开启本地 token 鉴权、限制高风险写操作，并把只读模式作为更安全的本地起步姿态。",
+      eyebrow: t("Added", "新增"),
+      title: t("Operator-facing workbenches", "更偏运营的工作台"),
+      summary: t(
+        "This fork adds clearer operating views for staff, usage attribution, and source-backed documents.",
+        "这个 fork 增加了更适合运营的员工视图、用量归因和源文件工作台。",
       ),
+      bullets: [
+        t("Homepage focuses on control posture, who is active, runtime checkpoints, and AI burn.", "首页优先展示总控态势、谁在忙、运行检查点和 AI 用量。"),
+        t("Documents and Memory let you inspect active-agent files without leaving the control center.", "文档与记忆页可以直接查看活跃 agent 的文件，不用离开控制中心。"),
+      ],
+      href: buildHomeHref({ quick: "all" }, options.compactStatusStrip, "docs", options.language, options.usageView),
+      action: t("Open docs", "查看文档"),
+    },
+    {
+      eyebrow: t("Default safety", "默认安全"),
+      title: t("Safer local boundary", "更稳的本地边界"),
+      summary: t(
+        "The fork stays conservative by default so local operators do not accidentally expose or mutate too much.",
+        "这版 fork 默认采用更保守的边界，避免本地操作员误暴露或误写入。",
+      ),
+      bullets: [
+        t("Local-token auth remains the default entry gate.", "本地 token 鉴权保持为默认入口门槛。"),
+        t("Readonly mode and restricted mutation routes remain the safer starting posture.", "只读模式和受限写操作继续作为更安全的起步姿态。"),
+      ],
       href: buildHomeHref({ quick: "all" }, options.compactStatusStrip, "settings", options.language, options.usageView),
       action: t("Open settings", "查看设置"),
     },
     {
-      title: t("Operator-first homepage", "更偏运营视角的首页"),
-      detail: t(
-        "The homepage now emphasizes control posture, intervention queue, active staff, runtime checkpoints, and AI burn so non-technical users can decide from one screen.",
-        "首页现在优先展示总控态势、介入队列、谁在忙、运行检查点和 AI 用量，让非技术用户能在一个页面里做判断。",
+      eyebrow: t("How to use it", "使用方式"),
+      title: t("Recommended first path", "推荐先看顺序"),
+      summary: t(
+        "Open the fork like an operator: decide from one screen first, then drill down only when needed.",
+        "建议按运营视角使用这个 fork：先在一个页面判断，再按需下钻。",
       ),
+      bullets: [
+        t("Start with Overview to judge control posture and intervention needs.", "先看总览，判断整体态势和是否需要你介入。"),
+        t("Then open Usage and Staff for spend clarity and live execution context.", "再看用量和员工，确认花费结构和实时执行上下文。"),
+      ],
       href: staffHubHref,
       action: t("Open staff", "查看员工"),
     },
-    {
-      title: t("Added source-backed workbenches", "新增源文件工作台"),
-      detail: t(
-        "Documents and Memory sections were added so operators can inspect active agent files without leaving the control center.",
-        "新增了文档与记忆工作台，方便直接在控制中心里查看活跃 agent 的源文件和记忆内容。",
-      ),
-      href: buildHomeHref({ quick: "all" }, options.compactStatusStrip, "docs", options.language, options.usageView),
-      action: t("Open docs", "查看文档"),
-    },
   ]
     .map(
-      (item) => `<a class="decision-row" href="${escapeHtml(item.href)}">
-        <div class="decision-row-copy">
-          <strong>${escapeHtml(item.title)}</strong>
-          <div class="meta">${escapeHtml(item.detail)}</div>
-        </div>
-        <div class="decision-row-link">${escapeHtml(item.action)}</div>
-      </a>`,
+      (item) => `<article class="fork-release-card">
+        <div class="fork-release-eyebrow">${escapeHtml(item.eyebrow)}</div>
+        <h3>${escapeHtml(item.title)}</h3>
+        <p>${escapeHtml(item.summary)}</p>
+        <ul class="story-list">${item.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("")}</ul>
+        <div class="fork-release-action"><a class="btn" href="${escapeHtml(item.href)}">${escapeHtml(item.action)}</a></div>
+      </article>`,
     )
     .join("");
   const overviewBusyAgents = executionAgentSummaries
@@ -4451,7 +4471,7 @@ async function renderHtml(
         </div>
         <a class="btn" href="${escapeHtml(usageDetailHref)}">${escapeHtml(t("See changed areas", "查看改动区域"))}</a>
       </div>
-      <div class="decision-list">${forkHighlightRows}</div>
+      <div class="fork-release-grid">${forkReleaseCardsHtml}</div>
     </article>
     <details class="card compact-details overview-secondary-shell" id="overview-secondary-shell">
       <summary>${escapeHtml(t("Expand runtime detail", "展开运行细节"))}</summary>
@@ -5725,6 +5745,46 @@ async function renderHtml(
     }
     .overview-main-grid > .card { align-self: start; }
     .overview-main-grid .overview-span { grid-column: 1 / -1; }
+    .fork-release-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .fork-release-card {
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, rgba(249, 252, 255, 0.98), rgba(255, 255, 255, 0.95)),
+        radial-gradient(circle at 100% 0%, rgba(53, 120, 176, 0.08), transparent 42%);
+      padding: 15px 15px 14px;
+      box-shadow: var(--card-shadow-soft);
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .fork-release-card h3 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: #1d1d1f;
+    }
+    .fork-release-card p {
+      margin: 0;
+      color: #4b5563;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .fork-release-eyebrow {
+      font-size: 11px;
+      color: #0b6db3;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 720;
+    }
+    .fork-release-action {
+      margin-top: 4px;
+    }
     .exec-card {
       border: 1px solid var(--card-border);
       border-radius: 16px;
@@ -7658,6 +7718,7 @@ async function renderHtml(
       .task-hub-grid { grid-template-columns: 1fr; }
       .task-hub-board-grid { grid-template-columns: 1fr; }
       .overview-busy-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .fork-release-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .staff-brief-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -7674,6 +7735,7 @@ async function renderHtml(
       .task-hub-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .timeline-summary-strip { grid-template-columns: 1fr; }
       .overview-busy-grid { grid-template-columns: 1fr; }
+      .fork-release-grid { grid-template-columns: 1fr; }
       .dashboard-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .execution-chain-list { grid-template-columns: 1fr; }
       .file-workbench { grid-template-columns: 1fr; }
@@ -7693,6 +7755,7 @@ async function renderHtml(
       .overview-focus-score { font-size: 24px; }
       .overview-main-grid { grid-template-columns: 1fr; }
       .overview-action-grid { grid-template-columns: 1fr; }
+      .fork-release-grid { grid-template-columns: 1fr; }
       .overview-task-strip { flex-direction: column; }
       .overview-quick-links { justify-content: flex-start; min-width: 0; }
       .task-hub-stat-grid { grid-template-columns: 1fr; }
