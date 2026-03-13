@@ -179,6 +179,14 @@ export async function listSessionConversations(
 
   const items = await Promise.all(
     paged.map(async (session) => {
+      if (historyLimit === 0) {
+        return {
+          ...session,
+          historyCount: 0,
+          toolEventCount: 0,
+          executionChain: inferSessionExecutionChainFromKey(session),
+        };
+      }
       const history = await readSessionHistory(input.client, session.sessionKey, historyLimit);
       const latest = pickLatestMessage(history.messages);
       return {
@@ -955,7 +963,7 @@ function normalizePageSize(input: number): number {
 
 function normalizeHistoryLimit(input: number, fallback = 8): number {
   if (!Number.isFinite(input)) return fallback;
-  return Math.max(1, Math.min(200, Math.trunc(input)));
+  return Math.max(0, Math.min(200, Math.trunc(input)));
 }
 
 function asObject(v: unknown): Record<string, unknown> | undefined {

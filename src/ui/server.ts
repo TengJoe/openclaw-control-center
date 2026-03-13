@@ -3453,7 +3453,7 @@ async function loadCachedSessionPreview(snapshot: ReadModelSnapshot, toolClient:
     filters: {},
     page: 1,
     pageSize: 8,
-    historyLimit: 6,
+    historyLimit: 0,
   });
   renderSessionPreviewCache = {
     snapshotAt: snapshot.generatedAt,
