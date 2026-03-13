@@ -4097,14 +4097,14 @@ async function renderHtml(
       value: pendingDecisionCount,
       detail:
         pendingDecisionCount > 0
-          ? t("Approvals or runtime actions are waiting for review", "还有审批或运行异常等待处理")
+          ? t("Action queue items are waiting for review", "还有待处理事项在等待你审阅")
           : t("Nothing is waiting for review", "当前没有待审事项"),
     },
     {
       label: t("Runtime issues", "运行异常"),
-      value: runtimeIssueCount,
+      value: runtimeSessionIssueCount,
       detail:
-        runtimeIssueCount > 0
+        runtimeSessionIssueCount > 0 || stalledRunningSessionCount > 0
           ? t(
               `${runtimeSessionIssueCount} blocked/error/waiting sessions · ${stalledRunningSessionCount} stalled runs`,
               `${runtimeSessionIssueCount} 个阻塞/异常/等待会话 · ${stalledRunningSessionCount} 个停滞执行`,
@@ -4787,7 +4787,7 @@ async function renderHtml(
             <h2>${escapeHtml(t("Waiting for your decision", "等待你决策"))}</h2>
             <div>${badge(pendingDecisionCount > 0 ? "warn" : "ok", pendingDecisionCount > 0 ? t("Queue active", "队列活跃") : t("Clear", "已清空"))}</div>
           </div>
-          <div class="meta">${escapeHtml(t("Pending decisions", "待处理事项"))} ${pendingDecisionCount} · ${escapeHtml(t("Approvals", "审批"))} ${pendingApprovalsCount} · ${escapeHtml(t("Unacked alerts", "未确认告警"))} ${actionQueue.counts.unacked}</div>
+          <div class="meta">${escapeHtml(t("Pending decisions", "待处理事项"))} ${pendingDecisionCount} · ${escapeHtml(t("Pending approvals", "待审批"))} ${pendingApprovalsCount} · ${escapeHtml(t("Acked", "已确认"))} ${actionQueue.counts.acked}</div>
           ${taskDecisionPreviewHtml}
         </article>
       </section>
@@ -5104,6 +5104,9 @@ async function renderHtml(
     .ui-preload .app-shell { opacity: 1; transform: translateY(0); }
     body.ui-ready .app-shell { opacity: 1; transform: translateY(0); transition: opacity 260ms ease, transform 320ms ease; }
     body.page-leave .app-shell { opacity: 0; transform: translateY(10px) scale(0.996); transition: opacity 140ms ease, transform 150ms ease; }
+    body.ui-steady .app-shell {
+      transition: none !important;
+    }
     body::before {
       content: "";
       position: fixed;
@@ -5875,6 +5878,15 @@ async function renderHtml(
       pointer-events: none;
     }
     .card, .sidebar, .nav-link, .overview-hero-card { animation-delay: calc(var(--stagger-index, 0) * 36ms); }
+    body.ui-steady .card,
+    body.ui-steady .sidebar,
+    body.ui-steady .nav-link,
+    body.ui-steady .overview-hero-card,
+    body.ui-steady .overview-kpi-card,
+    body.ui-steady .overview-primary-card {
+      animation: none !important;
+      transition-duration: 120ms;
+    }
     .panel.is-reflowing .card,
     .panel.is-reflowing .overview-kpi-card {
       transition: transform 230ms ease, opacity 230ms ease;
@@ -11207,6 +11219,18 @@ function renderNativeMotionScript(language: UiLanguage = "zh"): string {
   const body = document.body;
   if (!body) return;
   const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const introMotionKey = 'openclaw:intro-motion:v1';
+  let shouldAnimateIntro = !prefersReducedMotion;
+  try {
+    if (window.sessionStorage.getItem(introMotionKey) === '1') {
+      shouldAnimateIntro = false;
+    } else {
+      window.sessionStorage.setItem(introMotionKey, '1');
+    }
+  } catch {}
+  if (!shouldAnimateIntro) {
+    body.classList.add('ui-steady');
+  }
   const revealNodes = Array.from(document.querySelectorAll('.panel .card, .sidebar .card, .nav-link, .overview-kpi-card, .overview-primary-card'));
   revealNodes.forEach((node, index) => {
     node.style.setProperty('--stagger-index', String(Math.min(index, 20)));
