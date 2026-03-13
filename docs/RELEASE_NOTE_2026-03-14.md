@@ -4,6 +4,45 @@
 
 This release turns the fork into a smoother long-running local control center with clearer boundaries, safer defaults, and more reviewable code.
 
+## Fork-vs-Upstream Snapshot
+
+Compared with `upstream/main`, the fork currently carries downstream work across:
+
+- security and local auth boundaries
+- overview / usage correctness
+- homepage and operator UX polish
+- dark-theme readability
+- UI render-path and read-model performance
+- local setup and deployment documentation
+
+Current local diff footprint against `upstream/main`:
+
+- 31 files changed
+- about 4003 insertions
+- about 781 deletions
+
+Most visible operator-facing differences:
+
+1. Overview and Usage correctness
+- `Overview` and `Usage` now share the same runtime/subscription truth source
+- homepage usage cards no longer drift away from the detail page
+- the homepage now includes a fork-intro card that explains what this fork fixed and added
+
+2. Safer local-default posture
+- local-token auth is treated as the normal entry gate
+- readonly mode is the preferred first-run posture
+- risky mutation routes stay constrained by default
+
+3. Faster UI reads
+- local file-backed paths are preferred over slower CLI reads for sessions, cron, and approvals
+- stale-while-revalidate behavior keeps page transitions responsive after cache expiry
+- heavier data only loads when the active page actually needs it
+
+4. More operator-readable interface
+- dark theme contrast is stronger on nested cards and utility panels
+- homepage sections are organized around intervention, staff activity, runtime checkpoints, and AI burn
+- docs and memory workbenches make it easier to inspect source-backed files from inside the control center
+
 ## Main Improvements
 
 1. Security and auth
@@ -28,6 +67,8 @@ This release turns the fork into a smoother long-running local control center wi
 - added safe nav prefetch for read-only routes
 - reduced readonly log noise for missing UI preferences
 - aligned health semantics so readonly UI mode is no longer penalized for expected missing monitor artifacts
+- added a homepage fork-intro card that explains what this fork fixed, added, and changed for operators
+- clarified the fork homepage and README copy so the value of the fork is visible without reading code
 
 ## Validation
 

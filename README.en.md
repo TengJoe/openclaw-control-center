@@ -49,6 +49,9 @@ If install and config still feel unclear, go straight to:
 If you want a fast map of the repo before editing code, go straight to:
 - [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
 
+If you want the fastest fork-vs-upstream summary, go straight to:
+- [docs/RELEASE_NOTE_2026-03-14.md](docs/RELEASE_NOTE_2026-03-14.md)
+
 ## Deployment On This Machine
 - Repo path: `~/.openclaw/workspace/agents/main/control-center`
 - Default URL: `http://127.0.0.1:4310`

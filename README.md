@@ -49,6 +49,9 @@ Fork 说明：这个 fork 额外收紧了 localhost 鉴权边界，并在只读 
 如果你想先快速理解仓库怎么分层，直接看：
 - [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
 
+如果你想看“这个 fork 相比 upstream 到底多了什么”，直接看：
+- [docs/RELEASE_NOTE_2026-03-14.md](docs/RELEASE_NOTE_2026-03-14.md)
+
 ## 这台机器上的部署方式
 - 仓库目录：`~/.openclaw/workspace/agents/main/control-center`
 - 默认地址：`http://127.0.0.1:4310`
