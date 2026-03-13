@@ -3,6 +3,10 @@ import { randomUUID } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { gzip as gzipCb } from "node:zlib";
+import { promisify } from "node:util";
+
+const gzip = promisify(gzipCb);
 import { OpenClawReadonlyAdapter } from "../adapters/openclaw-readonly";
 import {
   APPROVAL_ACTIONS_DRY_RUN,
@@ -851,7 +855,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
           preferencesPath: prefs.path,
           search,
         });
-        return writeText(res, 200, html, "text/html; charset=utf-8");
+        return writeText(res, 200, html, "text/html; charset=utf-8", req);
       }
 
       if (method === "GET" && path === "/docs") {
@@ -1479,7 +1483,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
         }
 
         const html = renderSessionDrilldownPage(detail, language);
-        return writeText(res, 200, html, "text/html; charset=utf-8");
+        return writeText(res, 200, html, "text/html; charset=utf-8", req);
       }
 
       if (method === "GET" && path.startsWith("/details/task/")) {
@@ -1514,7 +1518,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
           linkedSessions,
           language,
         });
-        return writeText(res, 200, html, "text/html; charset=utf-8");
+        return writeText(res, 200, html, "text/html; charset=utf-8", req);
       }
 
       if (method === "GET" && path.startsWith("/details/cron/")) {
@@ -1543,7 +1547,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
           snapshot.generatedAt ?? new Date().toISOString(),
           language,
         );
-        return writeText(res, 200, html, "text/html; charset=utf-8");
+        return writeText(res, 200, html, "text/html; charset=utf-8", req);
       }
 
       if (method === "GET" && path === "/api/audit") {
@@ -1562,7 +1566,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
         const severity = parseAuditSeverity(url.searchParams, false);
         const timeline = filterAuditTimeline(await loadAuditTimeline(snapshot), severity);
         const html = renderAuditPage(timeline, severity);
-        return writeText(res, 200, html, "text/html; charset=utf-8");
+        return writeText(res, 200, html, "text/html; charset=utf-8", req);
       }
 
       if (method === "GET" && path === "/api/commander/exceptions") {
@@ -5461,6 +5465,7 @@ async function renderHtml(
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OpenClaw Control Center</title>
   <style>
     :root {
@@ -14150,6 +14155,7 @@ function writeText(
   statusCode: number,
   body: string,
   contentType: string,
+  req?: IncomingMessage,
 ): void {
   const headers: Record<string, string> = { "content-type": contentType };
   const normalizedContentType = contentType.toLowerCase();
@@ -14161,6 +14167,26 @@ function writeText(
   const requestId = responseRequestId(res);
   if (requestId) {
     headers["x-request-id"] = requestId;
+  }
+  // Gzip compress large HTML responses when the client supports it
+  const acceptEncoding = req?.headers["accept-encoding"];
+  const clientAcceptsGzip = typeof acceptEncoding === "string" && acceptEncoding.includes("gzip");
+  if (clientAcceptsGzip && normalizedContentType.includes("text/html") && body.length > 1024) {
+    headers["content-encoding"] = "gzip";
+    headers["vary"] = "Accept-Encoding";
+    gzip(Buffer.from(body, "utf8")).then(
+      (compressed) => {
+        res.writeHead(statusCode, headers);
+        res.end(compressed);
+      },
+      () => {
+        // Fallback: send uncompressed on gzip failure
+        delete headers["content-encoding"];
+        res.writeHead(statusCode, headers);
+        res.end(body);
+      },
+    );
+    return;
   }
   res.writeHead(statusCode, headers);
   res.end(body);
