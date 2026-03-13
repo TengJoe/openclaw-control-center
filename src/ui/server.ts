@@ -5290,7 +5290,7 @@ async function renderHtml(
       height: 38px;
       padding: 0;
       border: 1px solid transparent;
-      border-radius: 15px;
+      border-radius: 999px;
       background: transparent;
       color: rgba(213, 224, 238, 0.68);
       cursor: pointer;
