@@ -13,6 +13,7 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+.pr-reviews/
 plans/
 workflows/
 mission.config.json

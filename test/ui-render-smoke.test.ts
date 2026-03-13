@@ -415,6 +415,30 @@ test("usage dashboard includes token type share and cron token share sections", 
   assert(source.includes("selectedUsageBreakdown.byCronAgent"));
 });
 
+test("dashboard wires CLI insight cards into overview, usage, memory, and settings", async () => {
+  const source = await readFile("src/ui/server.ts", "utf8");
+  assert(source.includes('id="overview-connection-health"'));
+  assert(source.includes('pickUiText(language, "Connection health", "接线状态")'));
+  assert(source.includes('pickUiText(language, "Gateway", "网关")'));
+  assert(source.includes('6 项关键用量数据里，已经接上 ${connectedCount} 项，还差 1 项：${gapLabel}。${impact}${action}'));
+  assert(source.includes("去设置页补上订阅或账单快照即可。"));
+  assert(source.includes('const needsConnectionHealth = activeSection === "settings";'));
+  assert(source.includes("const settingsSection = `\n    ${connectionHealthCard}"));
+  assert(source.includes('id="session-context-pressure"'));
+  assert(source.includes('pickUiText(language, "Context pressure", "上下文压力")'));
+  assert(source.includes("</section>\n    ${contextPressureCard}\n    <details class=\"card compact-details\">"));
+  assert(source.includes('id="memory-status-card"'));
+  assert(source.includes('pickUiText(language, "Memory status", "记忆状态")'));
+  assert(source.includes("${memoryWorkbench}\n    ${memoryStateSection}"));
+  assert(source.includes('id="security-risk-summary"'));
+  assert(source.includes('pickUiText(language, "Security risk summary", "安全风险摘要")'));
+  assert(source.includes('title: "反向代理信任尚未配置"'));
+  assert(source.includes('title: "检测到可能的多人共享使用场景"'));
+  assert(source.includes('id="update-status-card"'));
+  assert(source.includes('pickUiText(language, "Update status", "更新状态")'));
+  assert(source.includes('if (label === "stable (default)") return "稳定版（默认）";'));
+});
+
 test("memory and workspace sections expose editable file workbenches", async () => {
   const source = (await readFile("src/ui/server.ts", "utf8")).replace(/\r\n/g, "\n");
   assert(source.includes("/api/files"));

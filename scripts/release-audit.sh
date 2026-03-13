@@ -10,6 +10,7 @@ while IFS= read -r file; do
 done < <(
   rg --files --hidden \
     -g '!.git/**' \
+    -g '!.pr-reviews/**' \
     -g '!node_modules/**' \
     -g '!dist/**' \
     -g '!runtime/**' \

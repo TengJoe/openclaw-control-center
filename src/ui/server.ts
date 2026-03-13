@@ -46,6 +46,18 @@ import {
   normalizeToken,
   readAuthorizationBearer,
 } from "../runtime/local-token-auth";
+import {
+  loadCachedOpenClawConnectionSummary,
+  loadCachedOpenClawMemorySummary,
+  primeOpenClawCliInsights,
+  loadCachedOpenClawSecuritySummary,
+  loadCachedOpenClawUpdateSummary,
+  type OpenClawConnectionSummary,
+  type OpenClawInsightStatus,
+  type OpenClawMemorySummary,
+  type OpenClawSecuritySummary,
+  type OpenClawUpdateSummary,
+} from "../runtime/openclaw-cli-insights";
 import { appendOperationAudit } from "../runtime/operation-audit";
 import { ApprovalActionService } from "../runtime/approval-action-service";
 import { buildActionQueueLinks } from "../runtime/action-queue-links";
@@ -1694,6 +1706,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
 
   server.listen(port, "127.0.0.1", () => {
     console.log(`[mission-control] ui listening at http://127.0.0.1:${port}`);
+    void Promise.resolve().then(() => primeOpenClawCliInsights());
     void primeUiRenderCaches(toolClient);
   });
   return server;
@@ -2238,6 +2251,584 @@ function renderGlobalVisibilityStripCard(model: GlobalVisibilityViewModel, langu
       </header>
       ${renderGlobalVisibilityStrip(model, language)}
     </section>`;
+}
+
+function insightStatusLabel(status: OpenClawInsightStatus, language: UiLanguage): string {
+  if (status === "ok") return pickUiText(language, "Healthy", "正常");
+  if (status === "warn") return pickUiText(language, "Attention", "需关注");
+  if (status === "blocked") return pickUiText(language, "Blocked", "阻塞");
+  if (status === "info") return pickUiText(language, "Partial", "部分可用");
+  return pickUiText(language, "Unknown", "未知");
+}
+
+function connectorInsightStatus(snapshot: UsageCostSnapshot, language: UiLanguage): {
+  status: OpenClawInsightStatus;
+  connectedCount: number;
+  totalCount: number;
+  missingCount: number;
+  detail: string;
+  value: string;
+} {
+  const statuses = [
+    snapshot.connectors.modelContextCatalog,
+    snapshot.connectors.digestHistory,
+    snapshot.connectors.requestCounts,
+    snapshot.connectors.budgetLimit,
+    snapshot.connectors.providerAttribution,
+    snapshot.connectors.subscriptionUsage,
+  ];
+  const totalCount = statuses.length;
+  const connectedCount = statuses.filter((item) => item === "connected").length;
+  const partialCount = statuses.filter((item) => item === "partial").length;
+  const missingCount = totalCount - connectedCount;
+
+  const connectorGapLabel = (id: string): string => {
+    if (id === "subscription_usage") return pickUiText(language, "subscription / billing snapshot", "订阅 / 账单快照");
+    if (id === "cost_budget_limit") return pickUiText(language, "budget limit", "预算限额");
+    if (id === "request_counter") return pickUiText(language, "request counts", "请求计数");
+    if (id === "digest_history") return pickUiText(language, "trend history", "趋势历史");
+    if (id === "context_catalog") return pickUiText(language, "context capacity", "上下文容量");
+    if (id === "provider_mapping") return pickUiText(language, "model provider attribution", "模型供应商归因");
+    return pickUiText(language, "usage data", "用量数据");
+  };
+
+  const connectorGapImpact = (id: string): string => {
+    if (id === "subscription_usage") {
+      return pickUiText(language, "Quota windows will show estimated or disconnected states.", "额度窗口会显示估算或未连接。");
+    }
+    if (id === "cost_budget_limit") {
+      return pickUiText(language, "Budget risk can only use spend so far, not a real limit.", "预算风险只能看已花金额，暂时还不能按上限预警。");
+    }
+    if (id === "request_counter") {
+      return pickUiText(language, "Request counts and parts of trend history will stay incomplete.", "请求次数和部分趋势会不完整。");
+    }
+    if (id === "digest_history") {
+      return pickUiText(language, "7d / 30d trends will stay incomplete.", "7 天 / 30 天趋势会不完整。");
+    }
+    if (id === "context_catalog") {
+      return pickUiText(language, "Context pressure will miss full capacity data.", "上下文压力会缺少完整容量信息。");
+    }
+    if (id === "provider_mapping") {
+      return pickUiText(language, "Some attribution will stay under “Unknown provider”.", "部分归因会落到“未知供应商”。");
+    }
+    return pickUiText(language, "Some usage panels will stay incomplete.", "部分用量面板会不完整。");
+  };
+
+  const connectorGapAction = (id: string): string => {
+    if (id === "subscription_usage") {
+      return pickUiText(language, "Open Settings and connect the subscription or billing snapshot.", "去设置页补上订阅或账单快照即可。");
+    }
+    if (id === "cost_budget_limit") {
+      return pickUiText(language, "Open Settings and add a budget limit.", "去设置页补上预算限额即可。");
+    }
+    if (id === "request_counter") {
+      return pickUiText(language, "Open Settings and connect the request-count source.", "去设置页按建议接通请求计数源即可。");
+    }
+    if (id === "digest_history") {
+      return pickUiText(language, "Keep monitoring running, or use Settings to complete trend history.", "保持监控持续运行，或按设置页建议补齐趋势历史即可。");
+    }
+    if (id === "context_catalog") {
+      return pickUiText(language, "Open Settings and connect model context capacity data.", "去设置页补上模型上下文容量数据即可。");
+    }
+    if (id === "provider_mapping") {
+      return pickUiText(language, "Open Settings and complete the model-to-provider mapping.", "去设置页补上模型到供应商的映射即可。");
+    }
+    return pickUiText(language, "Open Settings and follow the remaining data-connection suggestions.", "去设置页按建议补齐即可。");
+  };
+
+  const firstGap = snapshot.connectors.todos[0];
+  let detail = pickUiText(
+    language,
+    "All six key usage sources are connected, so usage, quota, and attribution can be trusted.",
+    "6 项关键用量数据都已接通，用量、额度和归因都可以直接看。",
+  );
+  let value = pickUiText(language, "Complete", "完整");
+
+  if (connectedCount === totalCount) {
+    return { status: "ok", connectedCount, totalCount, missingCount: 0, detail, value };
+  }
+
+  if (connectedCount === 0 && partialCount === 0) {
+    detail = pickUiText(
+      language,
+      "None of the six key usage sources are connected yet, so the Usage page will stay very limited until you connect them in Settings.",
+      "6 项关键用量数据都还没接通，所以用量页只会显示很有限的信息。先去设置页按建议接入即可。",
+    );
+    value = pickUiText(language, "Needs setup", "待接入");
+    return { status: "blocked", connectedCount, totalCount, missingCount, detail, value };
+  }
+
+  if (firstGap) {
+    const gapLabel = connectorGapLabel(firstGap.id);
+    const impact = connectorGapImpact(firstGap.id);
+    const action = connectorGapAction(firstGap.id);
+    if (missingCount === 1) {
+      detail = pickUiText(
+        language,
+        `${connectedCount} of ${totalCount} key usage sources are connected; the remaining item is ${gapLabel}. ${impact} ${action}`,
+        `6 项关键用量数据里，已经接上 ${connectedCount} 项，还差 1 项：${gapLabel}。${impact}${action}`,
+      );
+      value = pickUiText(language, "Missing 1", "差 1 项");
+    } else {
+      detail = pickUiText(
+        language,
+        `${connectedCount} of ${totalCount} key usage sources are connected, with ${missingCount} items still incomplete. The most important gap right now is ${gapLabel}. ${impact} ${action}`,
+        `6 项关键用量数据里，已经接上 ${connectedCount} 项，还差 ${missingCount} 项；当前最影响判断的是「${gapLabel}」。${impact}${action}`,
+      );
+      value = pickUiText(language, `Missing ${missingCount}`, `差 ${missingCount} 项`);
+    }
+  } else {
+    detail = pickUiText(
+      language,
+      `${connectedCount} of ${totalCount} key usage sources are connected, but ${missingCount} items are still incomplete. Open Settings and finish the remaining data connections.`,
+      `6 项关键用量数据里，已经接上 ${connectedCount} 项，但还有 ${missingCount} 项没有完整接通。去设置页按建议补齐即可。`,
+    );
+    value = pickUiText(language, `Missing ${missingCount}`, `差 ${missingCount} 项`);
+  }
+
+  return {
+    status: "warn",
+    connectedCount,
+    totalCount,
+    missingCount,
+    detail,
+    value,
+  };
+}
+
+function localizeConnectionInsightValue(
+  item: OpenClawConnectionSummary["items"][number],
+  language: UiLanguage,
+): string {
+  if (item.key === "gateway") {
+    return item.status === "ok"
+      ? pickUiText(language, "Connected", "已接通")
+      : pickUiText(language, "Unavailable", "未接通");
+  }
+  if (item.key === "config") {
+    return item.status === "ok"
+      ? pickUiText(language, "Ready", "已就绪")
+      : pickUiText(language, "Needs fix", "待修复");
+  }
+  if (item.value === "loading") {
+    return pickUiText(language, "Loading", "读取中");
+  }
+  return item.value;
+}
+
+function localizeConnectionInsightDetail(
+  item: OpenClawConnectionSummary["items"][number],
+  language: UiLanguage,
+): string {
+  if (item.key === "gateway") {
+    return item.status === "ok"
+      ? item.detail
+      : pickUiText(language, "Gateway is not reachable.", "当前还无法连到 Gateway。");
+  }
+  if (item.key === "config") {
+    const allowedOriginsMatch = item.detail.match(/^(\d+) allowed origin/);
+    if (allowedOriginsMatch) {
+      const count = Number.parseInt(allowedOriginsMatch[1] ?? "0", 10);
+      return pickUiText(
+        language,
+        `${count} allowed origin${count === 1 ? "" : "s"}`,
+        `已配置 ${count} 个允许来源`,
+      );
+    }
+    if (item.detail === "Local-only by default") {
+      return pickUiText(language, "Local-only by default.", "默认仅允许本机访问。");
+    }
+    return pickUiText(language, "openclaw.json is missing or invalid.", "openclaw.json 缺失或配置无效。");
+  }
+  const runtimeVisibleMatch = item.detail.match(/^(\d+) session(?:s)? visible across (\d+) agent/);
+  if (runtimeVisibleMatch) {
+    const sessionCount = Number.parseInt(runtimeVisibleMatch[1] ?? "0", 10);
+    const agentCount = Number.parseInt(runtimeVisibleMatch[2] ?? "0", 10);
+    return pickUiText(
+      language,
+      `${sessionCount} session${sessionCount === 1 ? "" : "s"} visible across ${agentCount} agent${agentCount === 1 ? "" : "s"}`,
+      `已看到 ${sessionCount} 个会话，覆盖 ${agentCount} 个智能体`,
+    );
+  }
+  const configuredMatch = item.detail.match(/^(\d+) agent(?:s)? configured, but no recent sessions yet$/);
+  if (configuredMatch) {
+    const agentCount = Number.parseInt(configuredMatch[1] ?? "0", 10);
+    return pickUiText(
+      language,
+      `${agentCount} agent${agentCount === 1 ? "" : "s"} configured, but no recent sessions yet`,
+      `已配置 ${agentCount} 个智能体，但还没有最近会话`,
+    );
+  }
+  if (item.detail === "Runtime status is still loading") {
+    return pickUiText(language, "Runtime status is still loading.", "正在读取运行时状态。");
+  }
+  return pickUiText(language, "No runtime sessions are visible yet.", "当前还没有看到运行时会话。");
+}
+
+function localizeSecurityFinding(
+  item: OpenClawSecuritySummary["findings"][number],
+  language: UiLanguage,
+): { title: string; detail: string; remediation?: string } {
+  if (language === "en") {
+    return {
+      title: item.title,
+      detail: item.detail,
+      remediation: item.remediation,
+    };
+  }
+
+  if (item.checkId === "summary.attack_surface") {
+    return {
+      title: "当前暴露面概览",
+      detail: "当前环境更接近个人助理式单一信任边界，而不是多人共享隔离环境；高权限工具和内部钩子仍然可用。",
+    };
+  }
+  if (item.checkId === "gateway.trusted_proxies_missing") {
+    return {
+      title: "反向代理信任尚未配置",
+      detail: "如果你通过反向代理暴露控制中心，当前还没有声明可信代理来源，转发头信息可能被错误信任。",
+      remediation: "如果继续通过反向代理访问，请把可信代理 IP 配进 gateway.trustedProxies；否则保持控制中心仅本机访问。",
+    };
+  }
+  if (item.checkId === "gateway.tailscale_serve") {
+    return {
+      title: "已通过 Tailscale Serve 暴露 Gateway",
+      detail: "当前 Gateway 已经通过 Tailscale 暴露到 tailnet，可访问范围不再只限这台机器本地。",
+    };
+  }
+  if (item.checkId === "security.trust_model.multi_user_heuristic") {
+    return {
+      title: "检测到可能的多人共享使用场景",
+      detail: "当前环境看起来不只是单人自用，但 OpenClaw 默认更适合单一可信操作者，不适合把同一 Gateway 当成多人隔离环境。",
+      remediation: "如果确实给多人使用，最好拆分成独立 Gateway 或独立系统账号；至少先收紧沙箱、文件访问和高权限工具范围。",
+    };
+  }
+
+  return {
+    title: item.title,
+    detail: item.detail,
+    remediation: item.remediation,
+  };
+}
+
+function localizeUpdateChannelLabel(label: string | undefined, language: UiLanguage): string {
+  if (!label) return "-";
+  if (language === "en") return label;
+  if (label === "stable (default)") return "稳定版（默认）";
+  if (label === "stable") return "稳定版";
+  if (label === "beta") return "测试版";
+  if (label === "dev") return "开发版";
+  return label;
+}
+
+function localizeUpdateInstallKind(kind: string | undefined, language: UiLanguage): string {
+  if (!kind) return "-";
+  if (language === "en") return kind;
+  if (kind === "package") return "软件包";
+  if (kind === "git") return "Git";
+  return kind;
+}
+
+function localizeCurrentVersionValue(summary: OpenClawUpdateSummary, language: UiLanguage): string {
+  if (summary.currentVersion) return summary.currentVersion;
+  if (summary.latestVersion) return pickUiText(language, "Loading", "读取中");
+  return "-";
+}
+
+function renderOpenClawConnectionCard(
+  summary: OpenClawConnectionSummary | undefined,
+  usageCost: UsageCostSnapshot,
+  language: UiLanguage,
+): string {
+  if (!summary) {
+    return `<article class="card" id="overview-connection-health">
+      <div class="overview-command-head">
+        <h2>${escapeHtml(pickUiText(language, "Connection health", "接线状态"))}</h2>
+        <div>${badge("info", pickUiText(language, "Loading", "读取中"))}</div>
+      </div>
+      <div class="empty-state">${escapeHtml(pickUiText(language, "Connection signals are loading.", "正在读取接线状态。"))}</div>
+    </article>`;
+  }
+
+  const usageSourceSummary = connectorInsightStatus(usageCost, language);
+  const rows = [
+    ...summary.items.map((item) => ({
+      label:
+        item.key === "gateway"
+          ? pickUiText(language, "Gateway", "网关")
+          : item.key === "config"
+            ? pickUiText(language, "Config", "配置")
+            : pickUiText(language, "Runtime", "运行时"),
+      status: item.status,
+      detail: localizeConnectionInsightDetail(item, language),
+      value: localizeConnectionInsightValue(item, language),
+    })),
+    {
+      label: pickUiText(language, "Usage sources", "用量数据"),
+      status: usageSourceSummary.status,
+      detail: usageSourceSummary.detail,
+      value: usageSourceSummary.value,
+    },
+  ];
+  const connectedCount = rows.filter((item) => item.status === "ok").length;
+  const overallStatus =
+    summary.status === "blocked" || usageSourceSummary.status === "blocked"
+      ? "blocked"
+      : summary.status === "warn" || usageSourceSummary.status === "warn"
+        ? "warn"
+        : summary.status === "info"
+          ? "info"
+          : "ok";
+  const headline =
+    overallStatus === "ok"
+      ? pickUiText(language, "Control Center is fully connected to this OpenClaw environment.", "控制中心已经完整接上这台 OpenClaw 环境。")
+      : overallStatus === "blocked"
+        ? pickUiText(language, "Some core links are still blocked.", "有核心接线还没有打通。")
+        : pickUiText(language, "Control Center is usable, but some panels are still running in partial mode.", "控制中心已经可用，但有些面板仍处于部分接线状态。");
+
+  return `<article class="card" id="overview-connection-health">
+    <div class="overview-command-head">
+      <div>
+        <h2>${escapeHtml(pickUiText(language, "Connection health", "接线状态"))}</h2>
+        <div class="meta">${escapeHtml(headline)}</div>
+      </div>
+      <a class="btn" href="${escapeHtml(buildHomeHref({ quick: "all" }, true, "settings", language))}">${escapeHtml(
+        pickUiText(language, "Open settings", "查看设置"),
+      )}</a>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Healthy links", "已接通"))}</span><strong>${connectedCount}/${rows.length}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Updated", "更新"))}</span><strong>${escapeHtml(formatTimeAgoFromNow(summary.generatedAt, language))}</strong></div>
+    </div>
+    <div class="decision-list">${rows
+      .map(
+        (item) => `<div class="decision-row">
+          <div class="decision-row-copy">
+            <strong>${escapeHtml(item.label)}</strong>
+            <div class="meta">${badge(item.status, insightStatusLabel(item.status, language))} ${escapeHtml(item.detail)}</div>
+          </div>
+          <div class="decision-row-value">${escapeHtml(item.value)}</div>
+        </div>`,
+      )
+      .join("")}</div>
+  </article>`;
+}
+
+function renderOpenClawSecuritySection(
+  summary: OpenClawSecuritySummary | undefined,
+  language: UiLanguage,
+): string {
+  if (!summary) {
+    return `<section class="card" id="security-risk-summary">
+      <h2>${escapeHtml(pickUiText(language, "Security risk summary", "安全风险摘要"))}</h2>
+      <div class="empty-state">${escapeHtml(pickUiText(language, "Security audit is loading.", "正在读取安全审计。"))}</div>
+    </section>`;
+  }
+
+  const headline =
+    summary.status === "blocked"
+      ? pickUiText(language, "There are critical security issues to address.", "当前有需要立刻处理的安全风险。")
+      : summary.status === "warn"
+        ? pickUiText(language, "There are a few configuration risks worth reviewing.", "当前有几项配置风险值得检查。")
+        : summary.status === "info"
+          ? pickUiText(language, "Security looks stable, with informational notes only.", "当前整体安全稳定，只有信息提示。")
+          : pickUiText(language, "No actionable security risk is visible right now.", "当前没有需要处理的安全风险。");
+  const findingsHtml =
+    summary.findings.length === 0
+      ? `<div class="empty-state">${escapeHtml(pickUiText(language, "No audit findings yet.", "当前没有审计结果。"))}</div>`
+      : `<ul class="story-list">${summary.findings
+          .slice(0, 4)
+          .map((item) => {
+            const tone = item.severity === "critical" ? "blocked" : item.severity === "warn" ? "warn" : "info";
+            const localized = localizeSecurityFinding(item, language);
+            return `<li>${badge(tone, insightStatusLabel(tone, language))} <strong>${escapeHtml(localized.title)}</strong><div class="meta">${escapeHtml(
+              safeTruncate(normalizeInlineText(localized.detail), 200),
+            )}</div>${
+              localized.remediation
+                ? `<div class="meta">${escapeHtml(pickUiText(language, "Next step", "下一步"))}：${escapeHtml(
+                    safeTruncate(normalizeInlineText(localized.remediation), 180),
+                  )}</div>`
+                : ""
+            }</li>`;
+          })
+          .join("")}</ul>`;
+
+  return `<section class="card" id="security-risk-summary">
+    <div class="overview-command-head">
+      <div>
+        <h2>${escapeHtml(pickUiText(language, "Security risk summary", "安全风险摘要"))}</h2>
+        <div class="meta">${escapeHtml(headline)}</div>
+      </div>
+      <div>${badge(summary.status, insightStatusLabel(summary.status, language))}</div>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Critical", "高风险"))}</span><strong>${summary.counts.critical}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Warnings", "需关注"))}</span><strong>${summary.counts.warn}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Info", "提示"))}</span><strong>${summary.counts.info}</strong></div>
+    </div>
+    ${findingsHtml}
+  </section>`;
+}
+
+function renderOpenClawUpdateSection(
+  summary: OpenClawUpdateSummary | undefined,
+  language: UiLanguage,
+): string {
+  if (!summary) {
+    return `<section class="card" id="update-status-card">
+      <h2>${escapeHtml(pickUiText(language, "Update status", "更新状态"))}</h2>
+      <div class="empty-state">${escapeHtml(pickUiText(language, "Update status is loading.", "正在读取更新状态。"))}</div>
+    </section>`;
+  }
+
+  const headline = summary.updateAvailable
+    ? pickUiText(language, "A newer OpenClaw version is available.", "发现了更新版本。")
+    : pickUiText(language, "This OpenClaw runtime is already up to date.", "当前 OpenClaw 已是最新。");
+  return `<section class="card" id="update-status-card">
+    <div class="overview-command-head">
+      <div>
+        <h2>${escapeHtml(pickUiText(language, "Update status", "更新状态"))}</h2>
+        <div class="meta">${escapeHtml(headline)}</div>
+      </div>
+      <div>${badge(summary.status, insightStatusLabel(summary.status, language))}</div>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Current", "当前版本"))}</span><strong>${escapeHtml(localizeCurrentVersionValue(summary, language))}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Latest", "最新版本"))}</span><strong>${escapeHtml(summary.latestVersion ?? "-")}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Channel", "更新通道"))}</span><strong>${escapeHtml(localizeUpdateChannelLabel(summary.channelLabel, language))}</strong></div>
+    </div>
+    <div class="meta">${escapeHtml(pickUiText(language, "Install method", "安装方式"))} ${escapeHtml(localizeUpdateInstallKind(summary.installKind, language))} · ${escapeHtml(
+      pickUiText(language, "Package manager", "包管理器"),
+    )} ${escapeHtml(summary.packageManager ?? "-")}</div>
+  </section>`;
+}
+
+function renderContextPressureCard(snapshot: UsageCostSnapshot, language: UiLanguage): string {
+  if (snapshot.contextWindows.length === 0) {
+    return `<section class="card" id="session-context-pressure">
+      <h2>${escapeHtml(pickUiText(language, "Context pressure", "上下文压力"))}</h2>
+      <div class="empty-state">${escapeHtml(pickUiText(language, "No session context data yet.", "当前还没有会话上下文数据。"))}</div>
+    </section>`;
+  }
+
+  const ranked = [...snapshot.contextWindows].sort((a, b) => {
+    const rankA = a.thresholdState === "critical" ? 0 : a.thresholdState === "warn" ? 1 : a.thresholdState === "ok" ? 2 : 3;
+    const rankB = b.thresholdState === "critical" ? 0 : b.thresholdState === "warn" ? 1 : b.thresholdState === "ok" ? 2 : 3;
+    if (rankA !== rankB) return rankA - rankB;
+    return (b.usagePercent ?? 0) - (a.usagePercent ?? 0);
+  });
+  const criticalCount = ranked.filter((item) => item.thresholdState === "critical").length;
+  const warnCount = ranked.filter((item) => item.thresholdState === "warn").length;
+  const topUsage = ranked[0];
+  const headline =
+    criticalCount > 0
+      ? pickUiText(language, "Some sessions are close to their context ceiling.", "有会话已经接近上下文上限。")
+      : warnCount > 0
+        ? pickUiText(language, "A few sessions are worth watching.", "有几条会话值得继续盯住。")
+        : pickUiText(language, "Context pressure looks healthy right now.", "当前上下文压力整体正常。");
+
+  return `<section class="card" id="session-context-pressure">
+    <div class="overview-command-head">
+      <div>
+        <h2>${escapeHtml(pickUiText(language, "Context pressure", "上下文压力"))}</h2>
+        <div class="meta">${escapeHtml(headline)}</div>
+      </div>
+      <div>${badge(
+        criticalCount > 0 ? "warn" : warnCount > 0 ? "info" : "ok",
+        criticalCount > 0 ? pickUiText(language, "High", "较高") : warnCount > 0 ? pickUiText(language, "Watch", "观察中") : pickUiText(language, "Healthy", "正常"),
+      )}</div>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Critical", "临界"))}</span><strong>${criticalCount}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Warning", "预警"))}</span><strong>${warnCount}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Highest usage", "最高占比"))}</span><strong>${escapeHtml(
+        topUsage?.usagePercent !== undefined ? `${topUsage.usagePercent.toFixed(1)}%` : "-",
+      )}</strong></div>
+    </div>
+    <div class="decision-list">${ranked
+      .slice(0, 6)
+      .map((item) => {
+        const href = buildSessionDetailHref(item.sessionKey, language);
+        const tone = item.thresholdState === "critical" ? "warn" : item.thresholdState === "warn" ? "info" : item.thresholdState === "ok" ? "ok" : "blocked";
+        const usageText =
+          item.usagePercent !== undefined ? `${item.usagePercent.toFixed(1)}%` : pickUiText(language, "Unavailable", "不可用");
+        return `<a class="decision-row" href="${escapeHtml(href)}">
+          <div class="decision-row-copy">
+            <strong>${escapeHtml(simplifyUsageLabel(item.sessionLabel))}</strong>
+            <div class="meta">${badge(
+              tone,
+              item.thresholdState === "critical"
+                ? pickUiText(language, "Critical", "临界")
+                : item.thresholdState === "warn"
+                  ? pickUiText(language, "Warning", "预警")
+                  : item.thresholdState === "ok"
+                    ? pickUiText(language, "Healthy", "正常")
+                    : pickUiText(language, "Unknown", "未知"),
+            )} ${escapeHtml(humanizeOperatorLabel(item.agentId))} · ${escapeHtml(item.model)}</div>
+            <div class="meta">${escapeHtml(pickUiText(language, "Used", "已使用"))} ${formatInt(item.usedTokens)} / ${item.contextLimitTokens ? formatInt(item.contextLimitTokens) : "-"} · ${escapeHtml(item.paceLabel)}</div>
+          </div>
+          <div class="decision-row-value">${escapeHtml(usageText)}</div>
+        </a>`;
+      })
+      .join("")}</div>
+  </section>`;
+}
+
+function renderMemoryStateSection(summary: OpenClawMemorySummary | undefined, language: UiLanguage): string {
+  if (!summary) {
+    return `<section class="card" id="memory-status-card">
+      <h2>${escapeHtml(pickUiText(language, "Memory status", "记忆状态"))}</h2>
+      <div class="empty-state">${escapeHtml(pickUiText(language, "Memory status is loading.", "正在读取记忆状态。"))}</div>
+    </section>`;
+  }
+
+  const headline =
+    summary.status === "blocked"
+      ? pickUiText(language, "Some agents still do not have usable memory.", "有智能体的记忆还不可用。")
+      : summary.status === "warn"
+        ? pickUiText(language, "Memory works, but some agents still need attention.", "记忆整体可用，但有些智能体还需要检查。")
+        : pickUiText(language, "Memory looks healthy for the visible agents.", "当前可见智能体的记忆状态正常。");
+
+  return `<section class="card" id="memory-status-card">
+    <div class="overview-command-head">
+      <div>
+        <h2>${escapeHtml(pickUiText(language, "Memory status", "记忆状态"))}</h2>
+        <div class="meta">${escapeHtml(headline)}</div>
+      </div>
+      <div>${badge(summary.status, insightStatusLabel(summary.status, language))}</div>
+    </div>
+    <div class="status-strip">
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Healthy", "正常"))}</span><strong>${summary.okCount}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Needs attention", "需关注"))}</span><strong>${summary.warnCount}</strong></div>
+      <div class="status-chip"><span>${escapeHtml(pickUiText(language, "Unavailable", "不可用"))}</span><strong>${summary.blockedCount}</strong></div>
+    </div>
+    <div class="decision-list">${summary.agents
+      .map((item) => {
+        const detailParts = [
+          `${formatInt(item.files)} ${pickUiText(language, "files", "份记忆")}`,
+          `${formatInt(item.chunks)} ${pickUiText(language, "chunks", "个块")}`,
+          item.searchable ? pickUiText(language, "searchable", "可搜索") : pickUiText(language, "search not ready", "搜索未就绪"),
+        ];
+        if (item.issuesCount > 0) {
+          detailParts.push(pickUiText(language, `${item.issuesCount} issue(s)`, `${item.issuesCount} 个异常`));
+        } else if (item.dirty) {
+          detailParts.push(pickUiText(language, "refresh pending", "待刷新"));
+        }
+        if (item.lastUpdateAt) {
+          detailParts.push(
+            pickUiText(language, `updated ${formatTimeAgoFromNow(item.lastUpdateAt, language)}`, `${formatTimeAgoFromNow(item.lastUpdateAt, language)} 更新`),
+          );
+        }
+        return `<div class="decision-row">
+          <div class="decision-row-copy">
+            <strong>${escapeHtml(humanizeOperatorLabel(item.agentId))}</strong>
+            <div class="meta">${badge(item.status, insightStatusLabel(item.status, language))} ${escapeHtml(detailParts.join(" · "))}</div>
+          </div>
+          <div class="decision-row-value">${escapeHtml(item.searchable ? pickUiText(language, "Ready", "可用") : pickUiText(language, "Check", "检查"))}</div>
+        </div>`;
+      })
+      .join("")}</div>
+  </section>`;
 }
 
 function scoreCoverageStatus(status: DataCoverageStatus): number {
@@ -3237,6 +3828,10 @@ async function renderHtml(
   const needsTeamSnapshot = activeSection === "team";
   const needsMemoryFiles = activeSection === "memory";
   const needsWorkspaceFiles = activeSection === "docs";
+  const needsConnectionHealth = activeSection === "settings";
+  const needsSecuritySummary = activeSection === "settings";
+  const needsUpdateSummary = activeSection === "settings";
+  const needsMemoryState = activeSection === "memory";
   markRenderPhase("snapshot");
   const exceptions = commanderExceptions(snapshot);
   const exceptionsFeed = commanderExceptionsFeed(snapshot);
@@ -3291,7 +3886,7 @@ async function renderHtml(
     loadCachedOfficeSessionPresence(),
   ]);
   markRenderPhase("shared-data");
-  const [teamSnapshot, memoryFiles, memoryFacetOptions, workspaceFiles, workspaceFacetOptions, taskEvidenceItems] = await Promise.all([
+  const [teamSnapshot, memoryFiles, memoryFacetOptions, workspaceFiles, workspaceFacetOptions, taskEvidenceItems, connectionHealthSummary, securitySummary, updateSummary, memoryStateSummary] = await Promise.all([
     needsTeamSnapshot
       ? loadTeamSnapshot(officeRoster)
       : Promise.resolve<TeamSnapshot>({
@@ -3312,6 +3907,10 @@ async function renderHtml(
           24,
         )
       : Promise.resolve<SessionConversationListItem[]>([]),
+    needsConnectionHealth ? loadCachedOpenClawConnectionSummary() : Promise.resolve<OpenClawConnectionSummary | undefined>(undefined),
+    needsSecuritySummary ? loadCachedOpenClawSecuritySummary() : Promise.resolve<OpenClawSecuritySummary | undefined>(undefined),
+    needsUpdateSummary ? loadCachedOpenClawUpdateSummary() : Promise.resolve<OpenClawUpdateSummary | undefined>(undefined),
+    needsMemoryState ? loadCachedOpenClawMemorySummary() : Promise.resolve<OpenClawMemorySummary | undefined>(undefined),
   ]);
   markRenderPhase("section-assets");
   const usageToday = usageCost.periods.find((item) => item.key === "today");
@@ -4083,6 +4682,11 @@ async function renderHtml(
           .join("")}</div>`;
   const subscriptionSidebarRows = renderSubscriptionSidebarSummary(usageCost.subscription, options.language);
   const usageDetailHref = buildHomeHref({ quick: "all" }, options.compactStatusStrip, "usage-cost", options.language, options.usageView);
+  const connectionHealthCard = renderOpenClawConnectionCard(connectionHealthSummary, usageCost, options.language);
+  const securityRiskSection = renderOpenClawSecuritySection(securitySummary, options.language);
+  const updateStatusSection = renderOpenClawUpdateSection(updateSummary, options.language);
+  const contextPressureCard = renderContextPressureCard(usageCost, options.language);
+  const memoryStateSection = renderMemoryStateSection(memoryStateSummary, options.language);
   const overviewUsagePeriods = isTodayUsageView
     ? usageCost.periods.filter((item) => item.key === "today")
     : usageCost.periods.filter((item) => item.key === "today" || item.key === "7d");
@@ -4685,6 +5289,7 @@ async function renderHtml(
       <div class="meta">${escapeHtml(t("Edits here sync directly back to the real memory files on the OpenClaw machine.", "这里的编辑会直接同步到 OpenClaw 机器上的真实记忆文件。"))}</div>
     </section>
     ${memoryWorkbench}
+    ${memoryStateSection}
   `;
   const mainDocumentCount = workspaceFiles.filter((entry) => entry.facetKey === "main").length;
   const workspaceWorkbench = needsWorkspaceFiles
@@ -4746,6 +5351,7 @@ async function renderHtml(
         <div class="fold-body">${usageCronAgentShareHtml}</div>
       </details>
     </section>
+    ${contextPressureCard}
     <details class="card compact-details">
       <summary>${escapeHtml(t("Advanced detail (attribution / model / context / budget)", "高级明细（归因/模型/上下文/预算）"))}</summary>
       <div class="fold-body">
@@ -5034,6 +5640,9 @@ async function renderHtml(
     </details>
   `;
   const settingsSection = `
+    ${connectionHealthCard}
+    ${securityRiskSection}
+    ${updateStatusSection}
     <section class="card">
       <h2>安全开关</h2>
       <table>

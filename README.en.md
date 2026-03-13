@@ -74,6 +74,13 @@ curl http://127.0.0.1:4310/healthz
 - `Tasks`: current work, approvals, execution chains, and runtime evidence
 - `Documents` and `Memory`: source-backed workbenches scoped to active OpenClaw agents
 
+## What this release adds
+- `Settings`: a new `Connection health` card that tells you what is already wired, what is still partial, and where to finish setup.
+- `Settings`: a new `Security risk summary` that translates current risk, impact, and next-step guidance into plain operator-facing language.
+- `Settings`: a new `Update status` card for current version, latest version, update channel, and install method.
+- `Usage`: a new `Context pressure` card so you can see which sessions are closer to context limits and where things may get slower or more expensive.
+- `Memory`: a new `Memory status` card so you can see whether each visible agent's memory is usable, searchable, or worth checking.
+
 ## Who it is for
 - OpenClaw users who want one local control center for observability, usage, tasks, approvals, replay, documents, and memory
 - teams running OpenClaw on one machine or a reachable local environment
@@ -128,7 +135,7 @@ Recommended first pages after login:
 
 ### Usage
 - Shows today, 7-day, and 30-day usage and spend trends.
-- Includes subscription windows, quota consumption, usage mix, and connector status.
+- Includes subscription windows, quota consumption, usage mix, context pressure, and connector status.
 - Best when you want to know whether spend or quota is becoming risky.
 
 ### Staff
@@ -139,6 +146,7 @@ Recommended first pages after login:
 ### Memory
 - A source-backed workbench for daily and long-term memory files.
 - Scoped to active OpenClaw agents from `openclaw.json`, so deleted agents do not keep showing up.
+- Now also shows whether each visible agent's memory is healthy, searchable, or needs attention.
 - Best when you want to inspect or edit memory that the current OpenClaw team is actually using.
 
 ### Documents
@@ -154,6 +162,7 @@ Recommended first pages after login:
 ### Settings
 - Shows safety mode, connector status, and data-link expectations.
 - Makes it clear what is connected, what is still partial, and which high-risk actions are intentionally disabled.
+- Now includes `Connection health`, `Security risk summary`, and `Update status` as dedicated operator cards.
 - Best when you want to verify environment setup or explain why a signal is missing.
 
 For:

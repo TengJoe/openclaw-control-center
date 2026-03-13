@@ -1,6 +1,6 @@
 # Progress
 
-## Phase 153 (Cherry-picked session-preview cold-start optimization) — Completed
+## Phase 154 (Cherry-picked session-preview cold-start optimization) — Completed
 - Scope:
   - Bring in the upstream session-preview cold-start optimization without reverting the fork's existing readonly-file fast paths, homepage changes, or local architecture.
 - Changed files:
@@ -14,6 +14,43 @@
 - Verification:
   - `npm run build`
   - `npm test`
+
+## Phase 153 (CLI insight cards for connection, memory, context, security, and update state) — Completed
+- Scope:
+  - Add high-value OpenClaw CLI visibility surfaces without changing the existing information architecture, visual style, or operator workflows.
+  - Keep the new signals human-readable, cached, and safe to render even when some CLI data sources are unavailable.
+- Changed files:
+  - `src/runtime/openclaw-cli-insights.ts`
+  - `src/ui/server.ts`
+  - `test/openclaw-cli-insights.test.ts`
+  - `test/ui-render-smoke.test.ts`
+  - `scripts/ui-smoke.js`
+  - `scripts/run_verifier.sh`
+  - `docs/PROGRESS.md`
+- Implementation:
+  - Added a cached OpenClaw CLI insight adapter that normalizes connection health, update status, security findings, and memory state into plain-language view models.
+  - Inserted new cards into the existing Apple-style surfaces instead of creating new pages:
+    - `Overview`: connection health
+    - `Usage`: context pressure
+    - `Memory`: memory state
+    - `Settings`: connection health, security risk summary, update status
+  - Kept the new modules read-only and resilient to partial installs so missing Gateway, Codex, or subscription data degrades into explicit status messaging instead of broken UI.
+  - Recovered valid CLI JSON even when a command exits late, so slow OpenClaw status probes no longer turn the first page load into a 500.
+  - Moved insight prewarming behind `ui listening` and localized the visible Chinese connection/security/update copy so the new cards stay fast enough to open and read naturally.
+  - Replaced misleading `0` / `-` placeholders with explicit loading states when a CLI snapshot is still warming up, so first-load cards stay honest instead of looking broken.
+  - Removed the detailed `接线状态` card from `总览` and kept it only in `设置`, so the overview no longer repeats setup diagnostics that already have a dedicated home.
+  - Rewrote the `用量数据` row inside `接线状态` from an unexplained `5/6` counter into a plain-language explanation that tells the operator what is missing, what that affects, and what to do next in Settings.
+  - Moved the `上下文压力` card below `定时任务用量占比`, so Usage still opens with scope, trend, subscription, and timed-job comparison before deeper session pressure detail.
+  - Moved the `记忆状态` card below the editable `记忆文件工作台`, so the page still starts with the actual memory files and only then shows the health/status summary.
+  - Replaced the remaining verifier script absolute path with a repo-relative invocation so release/readiness checks stay green in public clones.
+- Verification:
+  - `npm run build`
+  - `node --import tsx --test test/openclaw-cli-insights.test.ts`
+  - `node --import tsx --test test/ui-render-smoke.test.ts`
+  - `npm test`
+  - `npm run smoke:ui`
+- Remaining gap:
+  - These cards currently refresh through short-lived cached CLI reads. If we later see low-end machines struggle with the added commands, the next step is stale-while-refresh at the CLI adapter layer, not UI simplification.
 
 ## Phase 152 (Fast local cron/approvals reads for readonly snapshots) — Completed
 - Scope:

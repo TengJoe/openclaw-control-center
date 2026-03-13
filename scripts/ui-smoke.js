@@ -12,6 +12,7 @@ const fs = require("node:fs");
 
 const PORT = process.env.UI_SMOKE_PORT || "4516";
 const WAIT_SECONDS = Number(process.env.UI_SMOKE_WAIT_SECONDS || "10");
+const PAGE_WAIT_SECONDS = Number(process.env.UI_SMOKE_PAGE_WAIT_SECONDS || "12");
 const ROOT = path.resolve(__dirname, "..");
 const LOG_DIR = path.join(ROOT, "runtime");
 const LOG_FILE = path.join(LOG_DIR, `ui-smoke-${PORT}.log`);
@@ -48,7 +49,7 @@ function fetch(urlPath) {
       }));
     });
     req.on("error", reject);
-    req.setTimeout(3000, () => { req.destroy(); reject(new Error("timeout")); });
+    req.setTimeout(6000, () => { req.destroy(); reject(new Error("timeout")); });
   });
 }
 
@@ -74,47 +75,62 @@ function hasAnyKeyword(body, keywords) {
   return keywords.some((kw) => body.includes(kw));
 }
 
-async function checkDashboardOrLogin() {
-  const res = await fetch("/");
-  if (res.statusCode === 200) {
-    if (!hasAnyKeyword(res.body, ["OpenClaw", "Control Center", "总览", "Overview"])) {
-      console.error(`FAIL: GET / returned 200 but dashboard markers were not found (${res.body.length} bytes).`);
-      cleanup(1);
+async function retryPageCheck(label, checkFn) {
+  const deadline = Date.now() + PAGE_WAIT_SECONDS * 1000;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      await checkFn();
+      return;
+    } catch (error) {
+      lastError = error;
     }
-    return;
+    await new Promise((r) => setTimeout(r, 1000));
   }
-
-  const location = typeof res.headers.location === "string" ? res.headers.location : "";
-  if (res.statusCode === 302 && location.startsWith("/login")) {
-    const loginRes = await fetch("/login");
-    if (loginRes.statusCode !== 200 || !hasAnyKeyword(loginRes.body, ["Local token", "本地令牌", "进入控制台"])) {
-      console.error(`FAIL: GET /login did not render the expected auth page (${loginRes.statusCode}).`);
-      cleanup(1);
-    }
-    return;
-  }
-
-  console.error(`FAIL: GET / returned unexpected status ${res.statusCode}.`);
+  console.error(`FAIL: ${label} — ${lastError instanceof Error ? lastError.message : "request failed"}.`);
   cleanup(1);
 }
 
-async function checkDocsOrLogin() {
-  const res = await fetch("/docs?lang=en");
-  if (res.statusCode === 200) {
-    if (!hasAnyKeyword(res.body, ["Open document workbench", "Control Center", "Docs"])) {
-      console.error(`FAIL: GET /docs?lang=en did not contain docs markers (${res.body.length} bytes).`);
-      cleanup(1);
-    }
+async function checkDashboardOrLogin() {
+  await retryPageCheck("GET /", async () => {
+    const res = await fetch("/");
+    if (res.statusCode === 200) {
+      if (!hasAnyKeyword(res.body, ["OpenClaw", "Control Center", "总览", "Overview"])) {
+        throw new Error(`dashboard markers were not found (${res.body.length} bytes)`);
+      }
       return;
-  }
+    }
 
-  const location = typeof res.headers.location === "string" ? res.headers.location : "";
-  if (res.statusCode === 302 && location.startsWith("/login")) {
-    return;
-  }
+    const location = typeof res.headers.location === "string" ? res.headers.location : "";
+    if (res.statusCode === 302 && location.startsWith("/login")) {
+      const loginRes = await fetch("/login");
+      if (loginRes.statusCode !== 200 || !hasAnyKeyword(loginRes.body, ["Local token", "本地令牌", "进入控制台"])) {
+        throw new Error(`login page markers were not found (${loginRes.statusCode})`);
+      }
+      return;
+    }
 
-  console.error(`FAIL: GET /docs?lang=en returned unexpected status ${res.statusCode}.`);
-  cleanup(1);
+    throw new Error(`unexpected status ${res.statusCode}`);
+  });
+}
+
+async function checkDocsOrLogin() {
+  await retryPageCheck("GET /docs?lang=en", async () => {
+    const res = await fetch("/docs?lang=en");
+    if (res.statusCode === 200) {
+      if (!hasAnyKeyword(res.body, ["Open document workbench", "Control Center", "Docs"])) {
+        throw new Error(`docs markers were not found (${res.body.length} bytes)`);
+      }
+      return;
+    }
+
+    const location = typeof res.headers.location === "string" ? res.headers.location : "";
+    if (res.statusCode === 302 && location.startsWith("/login")) {
+      return;
+    }
+
+    throw new Error(`unexpected status ${res.statusCode}`);
+  });
 }
 
 async function checkGzipSupport() {

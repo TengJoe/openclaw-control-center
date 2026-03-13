@@ -675,6 +675,40 @@ async function readRecentSessionHistoryTail(
   }
 }
 
+async function readRecentSessionHistoryChunk(sessionFile: string, targetLineCount: number): Promise<string> {
+  const handle = await open(sessionFile, "r");
+  try {
+    const { size } = await handle.stat();
+    if (size <= 0) return "";
+
+    let position = size;
+    let newlineCount = 0;
+    const chunks: Buffer[] = [];
+
+    while (position > 0 && newlineCount < targetLineCount) {
+      const bytesToRead = Math.min(SESSION_HISTORY_TAIL_CHUNK_BYTES, position);
+      position -= bytesToRead;
+
+      const buffer = Buffer.allocUnsafe(bytesToRead);
+      const { bytesRead } = await handle.read(buffer, 0, bytesToRead, position);
+      if (bytesRead <= 0) break;
+
+      const chunk = bytesRead === bytesToRead ? buffer : buffer.subarray(0, bytesRead);
+      chunks.push(chunk);
+      newlineCount += countLineFeeds(chunk);
+    }
+
+    if (chunks.length === 0) return "";
+
+    const raw = Buffer.concat(chunks.reverse()).toString("utf8");
+    if (position <= 0) return raw;
+
+    const firstLineBreak = raw.indexOf("\n");
+    return firstLineBreak >= 0 ? raw.slice(firstLineBreak + 1) : raw;
+  } finally {
+    await handle.close();
+  }
+}
 function countLineFeeds(buffer: Uint8Array): number {
   let count = 0;
   for (const byte of buffer) {
