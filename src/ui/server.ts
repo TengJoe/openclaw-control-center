@@ -5267,76 +5267,61 @@ async function renderHtml(
       font-size: 12px;
       color: var(--muted);
     }
-    .theme-toggle-track {
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 6px;
-      padding: 6px;
-      width: min(100%, 186px);
-      border-radius: 999px;
-      background:
-        linear-gradient(180deg, rgba(13, 18, 28, 0.94), rgba(17, 23, 34, 0.92)),
-        radial-gradient(circle at 20% 12%, rgba(255, 110, 110, 0.12), transparent 42%);
+    .topbar-theme-mode {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px;
+      width: fit-content;
       border: 1px solid rgba(126, 147, 177, 0.16);
+      border-radius: 22px;
+      background: color-mix(in srgb, rgba(18, 24, 36, 0.92) 70%, transparent);
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
         0 12px 28px rgba(9, 14, 24, 0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
-    .theme-toggle .segment-item.theme-toggle-button {
+    .topbar-theme-mode__btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 54px;
-      height: 54px;
+      width: 30px;
+      height: 30px;
       padding: 0;
-      border: 1px solid rgba(110, 126, 151, 0.14);
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(20, 27, 40, 0.92), rgba(15, 20, 31, 0.95));
+      border: 1px solid transparent;
+      border-radius: 11px;
+      background: transparent;
       color: rgba(213, 224, 238, 0.68);
       cursor: pointer;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.03),
-        0 1px 1px rgba(8, 12, 18, 0.18);
       transition:
-        transform 160ms ease,
         border-color 160ms ease,
         background 160ms ease,
         color 160ms ease,
         box-shadow 160ms ease;
     }
-    .theme-toggle .segment-item.theme-toggle-button:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255, 104, 111, 0.34);
+    .topbar-theme-mode__btn:hover {
       color: rgba(245, 248, 252, 0.92);
+      background: rgba(255, 255, 255, 0.04);
     }
-    .theme-toggle .segment-item.theme-toggle-button:focus-visible {
+    .topbar-theme-mode__btn:focus-visible {
       outline: none;
-      border-color: rgba(255, 104, 111, 0.42);
-      box-shadow:
-        0 0 0 3px rgba(255, 104, 111, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      box-shadow: var(--focus-ring);
     }
-    .theme-toggle .segment-item.theme-toggle-button.active {
-      border-color: rgba(255, 92, 101, 0.72);
+    .topbar-theme-mode__btn--active {
+      border-color: color-mix(in srgb, #ff5c5c 25%, transparent);
       background:
         linear-gradient(180deg, rgba(52, 25, 30, 0.96), rgba(38, 18, 23, 0.98)),
-        radial-gradient(circle at 50% 25%, rgba(255, 120, 120, 0.18), transparent 52%);
+        radial-gradient(circle at 50% 50%, rgba(255, 120, 120, 0.16), transparent 56%);
       color: #ff737d;
       box-shadow:
         0 0 0 2px rgba(255, 92, 101, 0.18),
         0 10px 24px rgba(101, 23, 31, 0.34),
         inset 0 0 0 1px rgba(255, 139, 146, 0.24);
     }
-    .theme-toggle-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-    }
-    .theme-toggle-icon svg {
-      width: 23px;
-      height: 23px;
+    .topbar-theme-mode__btn svg {
+      width: 14px;
+      height: 14px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.85;
@@ -9656,15 +9641,15 @@ function renderThemeToggle(language: UiLanguage): string {
   };
   return `<div class="theme-toggle" data-theme-toggle>
     <div class="theme-toggle-label">${escapeHtml(t("Theme", "主题"))}</div>
-    <div class="theme-toggle-track" role="group" aria-label="${escapeHtml(t("Theme", "主题"))}">
-      <button class="segment-item theme-toggle-button" type="button" data-theme-value="auto" data-theme-label="${escapeHtml(t("Auto", "跟随系统"))}" aria-label="${escapeHtml(t("Auto", "跟随系统"))}" title="${escapeHtml(t("Auto", "跟随系统"))}">
-        <span class="theme-toggle-icon theme-toggle-icon-auto">${icon("auto")}</span>
+    <div class="topbar-theme-mode" role="group" aria-label="${escapeHtml(t("Theme", "主题"))}">
+      <button class="topbar-theme-mode__btn" type="button" data-theme-value="auto" data-theme-label="${escapeHtml(t("Auto", "跟随系统"))}" aria-label="${escapeHtml(t("Auto", "跟随系统"))}" title="${escapeHtml(t("Auto", "跟随系统"))}">
+        ${icon("auto")}
       </button>
-      <button class="segment-item theme-toggle-button" type="button" data-theme-value="light" data-theme-label="${escapeHtml(t("Light", "明亮"))}" aria-label="${escapeHtml(t("Light", "明亮"))}" title="${escapeHtml(t("Light", "明亮"))}">
-        <span class="theme-toggle-icon theme-toggle-icon-light">${icon("light")}</span>
+      <button class="topbar-theme-mode__btn" type="button" data-theme-value="light" data-theme-label="${escapeHtml(t("Light", "明亮"))}" aria-label="${escapeHtml(t("Light", "明亮"))}" title="${escapeHtml(t("Light", "明亮"))}">
+        ${icon("light")}
       </button>
-      <button class="segment-item theme-toggle-button" type="button" data-theme-value="dark" data-theme-label="${escapeHtml(t("Dark", "黑暗"))}" aria-label="${escapeHtml(t("Dark", "黑暗"))}" title="${escapeHtml(t("Dark", "黑暗"))}">
-        <span class="theme-toggle-icon theme-toggle-icon-dark">${icon("dark")}</span>
+      <button class="topbar-theme-mode__btn" type="button" data-theme-value="dark" data-theme-label="${escapeHtml(t("Dark", "黑暗"))}" aria-label="${escapeHtml(t("Dark", "黑暗"))}" title="${escapeHtml(t("Dark", "黑暗"))}">
+        ${icon("dark")}
       </button>
     </div>
   </div>`;
@@ -9700,7 +9685,7 @@ function renderThemePreferenceScript(language: UiLanguage): string {
     toggles.forEach((root) => {
       root.querySelectorAll('[data-theme-value]').forEach((button) => {
         const active = normalizeMode(button.getAttribute('data-theme-value')) === nextMode;
-        button.classList.toggle('active', active);
+        button.classList.toggle('topbar-theme-mode__btn--active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
         const label = button.getAttribute('data-theme-label') || labels[normalizeMode(button.getAttribute('data-theme-value'))];
         button.setAttribute('title', label);
