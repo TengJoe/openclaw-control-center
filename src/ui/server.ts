@@ -5261,16 +5261,19 @@ async function renderHtml(
       margin-top: 10px;
       display: grid;
       gap: 8px;
-      align-items: start;
+      justify-items: center;
+      align-items: center;
     }
     .theme-toggle-label {
       font-size: 12px;
       color: var(--muted);
+      text-align: center;
     }
     .lang-toggle {
       display: grid;
       gap: 8px;
-      align-items: start;
+      justify-items: center;
+      align-items: center;
     }
     .topbar-language-mode {
       display: inline-flex;
