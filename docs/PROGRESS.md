@@ -1,5 +1,20 @@
 # Progress
 
+## Phase 153 (Cherry-picked session-preview cold-start optimization) — Completed
+- Scope:
+  - Bring in the upstream session-preview cold-start optimization without reverting the fork's existing readonly-file fast paths, homepage changes, or local architecture.
+- Changed files:
+  - `src/clients/openclaw-live-client.ts`
+  - `test/openclaw-live-client-history.test.ts`
+  - `docs/PROGRESS.md`
+- Implementation:
+  - Merged the upstream reverse JSONL tail-read optimization into the fork's dependency-injected `OpenClawLiveClient`.
+  - Kept the fork's local cron/approvals fast-path behavior and existing cache structure intact.
+  - Added upstream regression coverage for large cached history files and files without a trailing newline.
+- Verification:
+  - `npm run build`
+  - `npm test`
+
 ## Phase 152 (Fast local cron/approvals reads for readonly snapshots) — Completed
 - Scope:
   - Reduce background cold-snapshot cost further after the UI already switched to stale-while-revalidate.

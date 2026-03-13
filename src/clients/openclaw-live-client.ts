@@ -73,6 +73,9 @@ const INACTIVE_SESSION_STATES = new Set([
 ]);
 const FALLBACK_ACTIVE_RECENCY_WINDOW_MS = 45 * 60 * 1000;
 const SLOW_METADATA_CACHE_TTL_MS = 30_000;
+const SESSION_HISTORY_TAIL_MIN_LINES = 80;
+const SESSION_HISTORY_TAIL_LINE_MULTIPLIER = 8;
+const SESSION_HISTORY_TAIL_CHUNK_BYTES = 64 * 1024;
 
 /**
  * Live read client using official OpenClaw CLI JSON outputs.
@@ -609,8 +612,9 @@ async function readSessionHistoryFile(
   sessionFile: string,
   limit: number,
 ): Promise<SessionsHistoryResponse | undefined> {
+  const targetLineCount = Math.max(limit * SESSION_HISTORY_TAIL_LINE_MULTIPLIER, SESSION_HISTORY_TAIL_MIN_LINES);
   try {
-    const raw = await readRecentSessionHistoryTail(sessionFile, Math.max(limit * 8, 80));
+    const raw = await readRecentSessionHistoryTail(sessionFile, targetLineCount);
     if (typeof raw === "string") {
       const normalized = normalizeSessionHistoryChunk(raw, limit);
       if (normalized.rawText.trim() !== "") {
@@ -647,13 +651,13 @@ async function readRecentSessionHistoryTail(
     const chunks: Buffer[] = [];
 
     while (position > 0 && newlineCount <= targetLineCount) {
-      const chunkSize = Math.min(64 * 1024, position);
+      const chunkSize = Math.min(SESSION_HISTORY_TAIL_CHUNK_BYTES, position);
       position -= chunkSize;
       const buffer = Buffer.alloc(chunkSize);
       const { bytesRead } = await fileHandle.read(buffer, 0, chunkSize, position);
       const slice = bytesRead === chunkSize ? buffer : buffer.subarray(0, bytesRead);
       chunks.unshift(slice);
-      newlineCount += countNewlines(slice);
+      newlineCount += countLineFeeds(slice);
     }
 
     let raw = Buffer.concat(chunks).toString("utf8");
@@ -671,10 +675,10 @@ async function readRecentSessionHistoryTail(
   }
 }
 
-function countNewlines(buffer: Uint8Array): number {
+function countLineFeeds(buffer: Uint8Array): number {
   let count = 0;
   for (const byte of buffer) {
-    if (byte === 10) count += 1;
+    if (byte === 0x0a) count += 1;
   }
   return count;
 }
