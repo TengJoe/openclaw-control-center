@@ -1787,61 +1787,23 @@ async function readReadModelSnapshot(): Promise<ReadModelSnapshot> {
   ) {
     return renderSnapshotCache.value;
   }
+  if (renderSnapshotCache && renderSnapshotCache.sourceStamp === sourceStamp) {
+    if (!renderSnapshotInFlight || renderSnapshotInFlight.sourceStamp !== sourceStamp) {
+      const nextValue = buildReadModelSnapshot(sourceStamp);
+      renderSnapshotInFlight = { sourceStamp, value: nextValue };
+      void nextValue.finally(() => {
+        if (renderSnapshotInFlight?.sourceStamp === sourceStamp) {
+          renderSnapshotInFlight = undefined;
+        }
+      });
+    }
+    return renderSnapshotCache.value;
+  }
   if (renderSnapshotInFlight?.sourceStamp === sourceStamp) {
     return renderSnapshotInFlight.value;
   }
 
-  const nextValue = (async () => {
-    const snapshotMissing = sourceStamp.includes(`${SNAPSHOT_PATH}:missing`);
-    if (READONLY_MODE && snapshotMissing && readonlySnapshotToolClient) {
-      const adapter = new OpenClawReadonlyAdapter(readonlySnapshotToolClient);
-      const value = await adapter.snapshot();
-      renderSnapshotCache = {
-        sourceStamp,
-        value,
-        expiresAt: Date.now() + HTML_SNAPSHOT_CACHE_TTL_MS,
-      };
-      return value;
-    }
-    const snapshot = (await readSnapshotJsonWithRetry()) as Partial<ReadModelSnapshot>;
-    const [projects, tasks, budgetPolicy] = await Promise.all([
-      loadProjectStore(),
-      loadTaskStore(),
-      loadBudgetPolicy(),
-    ]);
-
-    if (budgetPolicy.issues.length > 0) {
-      console.warn("[mission-control] budget policy issues", {
-        path: budgetPolicy.path,
-        issues: budgetPolicy.issues,
-      });
-    }
-
-    const sessions = Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
-    const statuses = Array.isArray(snapshot.statuses) ? snapshot.statuses : [];
-
-    const value = {
-      sessions,
-      statuses,
-      cronJobs: Array.isArray(snapshot.cronJobs) ? snapshot.cronJobs : [],
-      approvals: Array.isArray(snapshot.approvals) ? snapshot.approvals : [],
-      projects,
-      projectSummaries: computeProjectSummaries(projects, tasks),
-      tasks,
-      tasksSummary: computeTasksSummary(tasks, projects.projects.length),
-      budgetSummary: computeBudgetSummary(sessions, statuses, tasks, projects, budgetPolicy.policy),
-      generatedAt:
-        typeof snapshot.generatedAt === "string" && !Number.isNaN(Date.parse(snapshot.generatedAt))
-          ? snapshot.generatedAt
-          : new Date().toISOString(),
-    } satisfies ReadModelSnapshot;
-    renderSnapshotCache = {
-      sourceStamp,
-      value,
-      expiresAt: Date.now() + HTML_SNAPSHOT_CACHE_TTL_MS,
-    };
-    return value;
-  })();
+  const nextValue = buildReadModelSnapshot(sourceStamp);
 
   renderSnapshotInFlight = { sourceStamp, value: nextValue };
   try {
@@ -1851,6 +1813,59 @@ async function readReadModelSnapshot(): Promise<ReadModelSnapshot> {
       renderSnapshotInFlight = undefined;
     }
   }
+}
+
+async function buildReadModelSnapshot(sourceStamp: string): Promise<ReadModelSnapshot> {
+  const snapshotMissing = sourceStamp.includes(`${SNAPSHOT_PATH}:missing`);
+  if (READONLY_MODE && snapshotMissing && readonlySnapshotToolClient) {
+    const adapter = new OpenClawReadonlyAdapter(readonlySnapshotToolClient);
+    const value = await adapter.snapshot();
+    renderSnapshotCache = {
+      sourceStamp,
+      value,
+      expiresAt: Date.now() + HTML_SNAPSHOT_CACHE_TTL_MS,
+    };
+    return value;
+  }
+
+  const snapshot = (await readSnapshotJsonWithRetry()) as Partial<ReadModelSnapshot>;
+  const [projects, tasks, budgetPolicy] = await Promise.all([
+    loadProjectStore(),
+    loadTaskStore(),
+    loadBudgetPolicy(),
+  ]);
+
+  if (budgetPolicy.issues.length > 0) {
+    console.warn("[mission-control] budget policy issues", {
+      path: budgetPolicy.path,
+      issues: budgetPolicy.issues,
+    });
+  }
+
+  const sessions = Array.isArray(snapshot.sessions) ? snapshot.sessions : [];
+  const statuses = Array.isArray(snapshot.statuses) ? snapshot.statuses : [];
+
+  const value = {
+    sessions,
+    statuses,
+    cronJobs: Array.isArray(snapshot.cronJobs) ? snapshot.cronJobs : [],
+    approvals: Array.isArray(snapshot.approvals) ? snapshot.approvals : [],
+    projects,
+    projectSummaries: computeProjectSummaries(projects, tasks),
+    tasks,
+    tasksSummary: computeTasksSummary(tasks, projects.projects.length),
+    budgetSummary: computeBudgetSummary(sessions, statuses, tasks, projects, budgetPolicy.policy),
+    generatedAt:
+      typeof snapshot.generatedAt === "string" && !Number.isNaN(Date.parse(snapshot.generatedAt))
+        ? snapshot.generatedAt
+        : new Date().toISOString(),
+  } satisfies ReadModelSnapshot;
+  renderSnapshotCache = {
+    sourceStamp,
+    value,
+    expiresAt: Date.now() + HTML_SNAPSHOT_CACHE_TTL_MS,
+  };
+  return value;
 }
 
 async function readSnapshotJsonWithRetry(): Promise<Partial<ReadModelSnapshot>> {
