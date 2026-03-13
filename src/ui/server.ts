@@ -5271,10 +5271,10 @@ async function renderHtml(
       display: inline-flex;
       align-items: center;
       gap: 2px;
-      padding: 4px;
+      padding: 5px;
       width: fit-content;
       border: 1px solid rgba(126, 147, 177, 0.16);
-      border-radius: 24px;
+      border-radius: 26px;
       background: color-mix(in srgb, rgba(18, 24, 36, 0.92) 70%, transparent);
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -5286,11 +5286,11 @@ async function renderHtml(
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 34px;
-      height: 34px;
+      width: 38px;
+      height: 38px;
       padding: 0;
       border: 1px solid transparent;
-      border-radius: 13px;
+      border-radius: 15px;
       background: transparent;
       color: rgba(213, 224, 238, 0.68);
       cursor: pointer;
@@ -5320,8 +5320,8 @@ async function renderHtml(
         inset 0 0 0 1px rgba(255, 139, 146, 0.24);
     }
     .topbar-theme-mode__btn svg {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       fill: none;
       stroke: currentColor;
       stroke-width: 1.85;
