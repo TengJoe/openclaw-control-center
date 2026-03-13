@@ -124,6 +124,8 @@ const OPENCLAW_CRON_JOBS_CANDIDATES = [
   join(process.cwd(), "..", "..", "..", "..", "cron", "jobs.json"),
 ];
 const DOCS_DIR = join(process.cwd(), "docs");
+const APP_ICON_SVG_PATH = join(process.cwd(), "docs", "assets", "openclaw-control-center-icon.svg");
+const APP_ICON_PNG_PATH = join(process.cwd(), "docs", "assets", "openclaw-control-center-icon.png");
 const README_PATH = join(process.cwd(), "README.md");
 const AGENT_ROOT_DIR = join(process.cwd(), "..");
 const MEMORY_DIR_CANDIDATES = [
@@ -820,7 +822,7 @@ export function startUiServer(port: number, toolClient: ToolClient): Server {
         ).join("");
         const docsHref = buildHomeHref({ quick: "all" }, true, "docs", language);
         const homeHref = buildHomeHref({ quick: "all" }, true, "overview", language);
-        const html = `<!doctype html><html><head><meta charset="utf-8" /><title>${escapeHtml(t("OpenClaw Control Center Docs", "OpenClaw Control Center 文档"))}</title></head><body><h1>${escapeHtml(t("OpenClaw Control Center Docs", "OpenClaw Control Center 文档"))}</h1><ul>${links}</ul><p><a href="${escapeHtml(docsHref)}">${escapeHtml(t("Open document workbench", "打开文档工作台"))}</a> · <a href="${escapeHtml(homeHref)}">${escapeHtml(t("Back to control center", "返回控制中心"))}</a></p></body></html>`;
+        const html = `<!doctype html><html><head><meta charset="utf-8" />${renderHeadIcons()}<title>${escapeHtml(t("OpenClaw Control Center Docs", "OpenClaw Control Center 文档"))}</title></head><body><h1>${escapeHtml(t("OpenClaw Control Center Docs", "OpenClaw Control Center 文档"))}</h1><ul>${links}</ul><p><a href="${escapeHtml(docsHref)}">${escapeHtml(t("Open document workbench", "打开文档工作台"))}</a> · <a href="${escapeHtml(homeHref)}">${escapeHtml(t("Back to control center", "返回控制中心"))}</a></p></body></html>`;
         return writeText(res, 200, html, "text/html; charset=utf-8");
       }
 
@@ -5027,6 +5029,7 @@ async function renderHtml(
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OpenClaw Control Center</title>
   <style>
@@ -9792,6 +9795,14 @@ function renderThemePreferenceScript(language: UiLanguage): string {
 </script>`;
 }
 
+function renderHeadIcons(): string {
+  return [
+    `<link rel="icon" type="image/svg+xml" href="${escapeHtml(APP_ICON_SVG_PATH)}" />`,
+    `<link rel="icon" type="image/png" sizes="1024x1024" href="${escapeHtml(APP_ICON_PNG_PATH)}" />`,
+    `<link rel="apple-touch-icon" href="${escapeHtml(APP_ICON_PNG_PATH)}" />`,
+  ].join("\n  ");
+}
+
 function buildHomeHref(
   filters: TaskQueryFilters,
   compactStatusStrip: boolean,
@@ -13358,6 +13369,7 @@ function renderSessionDrilldownPage(
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <title>${escapeHtml(t("OpenClaw Control Center Session Drilldown", "OpenClaw 控制中心会话详情"))}</title>
   <style>
     body { font-family: "SF Mono", Menlo, monospace; background: #0b1016; color: #d6e7f9; padding: 16px; margin: 0; }
@@ -13449,6 +13461,7 @@ function renderAuditPage(timeline: AuditTimelineSnapshot, severity: AuditSeverit
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <title>OpenClaw Control Center Audit Timeline</title>
   <style>
     body { font-family: "SF Mono", Menlo, monospace; background: #0b1016; color: #d6e7f9; padding: 16px; margin: 0; }
@@ -13523,6 +13536,7 @@ function renderTaskDetailPage(input: {
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <title>${escapeHtml(t("Task detail", "任务详情"))} · ${escapeHtml(task.taskId)}</title>
   <style>
     body { font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; margin:0; padding:20px; background:#f5f5f7; color:#1d1d1f; }
@@ -13600,6 +13614,7 @@ function renderCronJobDetailPage(
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <title>${escapeHtml(pickUiText(language, "Cron detail", "Cron 详情"))} · ${escapeHtml(job.jobId)}</title>
   <style>
     body { font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; margin:0; padding:20px; background:#f5f5f7; color:#1d1d1f; }
@@ -14083,6 +14098,7 @@ function renderUiLoginPage(input: {
 <html>
 <head>
   <meta charset="utf-8" />
+  ${renderHeadIcons()}
   <title>${escapeHtml(t("OpenClaw Control Center Login", "OpenClaw 控制中心登录"))}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
