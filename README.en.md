@@ -28,6 +28,9 @@ If install and config still feel unclear, go straight to:
 - [docs/LOCAL_SETUP.en.md](docs/LOCAL_SETUP.en.md)
 - [docs/LOCAL_SETUP.zh.md](docs/LOCAL_SETUP.zh.md)
 
+If you want a fast map of the repo before editing code, go straight to:
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+
 ## Deployment On This Machine
 - Repo path: `~/.openclaw/workspace/agents/main/control-center`
 - Default URL: `http://127.0.0.1:4310`

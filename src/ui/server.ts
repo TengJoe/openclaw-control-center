@@ -454,6 +454,7 @@ let renderUsageCostFullCache:
 let renderOfficePresenceCache:
   | { expiresAt: number; value: OfficeSessionPresenceSnapshot }
   | undefined;
+let renderOfficePresenceInFlight: Promise<OfficeSessionPresenceSnapshot> | undefined;
 let renderReplayPreviewCache:
   | {
       value: Awaited<ReturnType<typeof loadReplayIndex>>;
@@ -3582,14 +3583,38 @@ async function loadCachedOfficeSessionPresence(): Promise<OfficeSessionPresenceS
     return renderOfficePresenceCache.value;
   }
   if (renderOfficePresenceCache) {
+    if (!renderOfficePresenceInFlight) {
+      const nextValue = loadBestEffortOfficeSessionPresence();
+      renderOfficePresenceInFlight = nextValue;
+      void nextValue
+        .then((value) => {
+          renderOfficePresenceCache = {
+            value,
+            expiresAt: Date.now() + HTML_HEAVY_CACHE_TTL_MS,
+          };
+        })
+        .finally(() => {
+          renderOfficePresenceInFlight = undefined;
+        });
+    }
     return renderOfficePresenceCache.value;
   }
-  const value = await loadBestEffortOfficeSessionPresence();
-  renderOfficePresenceCache = {
-    value,
-    expiresAt: now + HTML_HEAVY_CACHE_TTL_MS,
-  };
-  return value;
+  if (renderOfficePresenceInFlight) {
+    return renderOfficePresenceInFlight;
+  }
+
+  const nextValue = loadBestEffortOfficeSessionPresence();
+  renderOfficePresenceInFlight = nextValue;
+  try {
+    const value = await nextValue;
+    renderOfficePresenceCache = {
+      value,
+      expiresAt: now + HTML_HEAVY_CACHE_TTL_MS,
+    };
+    return value;
+  } finally {
+    renderOfficePresenceInFlight = undefined;
+  }
 }
 
 async function loadCachedReplayPreview(): Promise<Awaited<ReturnType<typeof loadReplayIndex>>> {

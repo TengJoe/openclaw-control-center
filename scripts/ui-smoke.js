@@ -41,7 +41,11 @@ function fetch(urlPath) {
     const req = http.get(`http://127.0.0.1:${PORT}${urlPath}`, (res) => {
       let data = "";
       res.on("data", (c) => { data += c; });
-      res.on("end", () => resolve(data));
+      res.on("end", () => resolve({
+        statusCode: res.statusCode || 0,
+        headers: res.headers,
+        body: data,
+      }));
     });
     req.on("error", reject);
     req.setTimeout(3000, () => { req.destroy(); reject(new Error("timeout")); });
@@ -52,8 +56,11 @@ async function waitForUI() {
   const deadline = Date.now() + WAIT_SECONDS * 1000;
   while (Date.now() < deadline) {
     try {
-      await fetch("/");
-      return;
+      const res = await fetch("/healthz");
+      if (res.statusCode === 200 && res.body.includes("\"ok\": true")) {
+        return;
+      }
+      throw new Error(`unexpected health status ${res.statusCode}`);
     } catch (_) {
       await new Promise((r) => setTimeout(r, 1000));
     }
@@ -63,19 +70,82 @@ async function waitForUI() {
   cleanup(1);
 }
 
-async function checkPage(urlPath, keywords, label) {
-  const body = await fetch(urlPath);
-  const found = keywords.some((kw) => body.includes(kw));
-  if (!found) {
-    console.error(`FAIL: ${label} — none of [${keywords.join(", ")}] found in response (${body.length} bytes).`);
+function hasAnyKeyword(body, keywords) {
+  return keywords.some((kw) => body.includes(kw));
+}
+
+async function checkDashboardOrLogin() {
+  const res = await fetch("/");
+  if (res.statusCode === 200) {
+    if (!hasAnyKeyword(res.body, ["OpenClaw", "Control Center", "总览", "Overview"])) {
+      console.error(`FAIL: GET / returned 200 but dashboard markers were not found (${res.body.length} bytes).`);
+      cleanup(1);
+    }
+    return;
+  }
+
+  const location = typeof res.headers.location === "string" ? res.headers.location : "";
+  if (res.statusCode === 302 && location.startsWith("/login")) {
+    const loginRes = await fetch("/login");
+    if (loginRes.statusCode !== 200 || !hasAnyKeyword(loginRes.body, ["Local token", "本地令牌", "进入控制台"])) {
+      console.error(`FAIL: GET /login did not render the expected auth page (${loginRes.statusCode}).`);
+      cleanup(1);
+    }
+    return;
+  }
+
+  console.error(`FAIL: GET / returned unexpected status ${res.statusCode}.`);
+  cleanup(1);
+}
+
+async function checkDocsOrLogin() {
+  const res = await fetch("/docs?lang=en");
+  if (res.statusCode === 200) {
+    if (!hasAnyKeyword(res.body, ["Open document workbench", "Control Center", "Docs"])) {
+      console.error(`FAIL: GET /docs?lang=en did not contain docs markers (${res.body.length} bytes).`);
+      cleanup(1);
+    }
+      return;
+  }
+
+  const location = typeof res.headers.location === "string" ? res.headers.location : "";
+  if (res.statusCode === 302 && location.startsWith("/login")) {
+    return;
+  }
+
+  console.error(`FAIL: GET /docs?lang=en returned unexpected status ${res.statusCode}.`);
+  cleanup(1);
+}
+
+async function checkGzipSupport() {
+  const res = await new Promise((resolve, reject) => {
+    const req = http.get(
+      `http://127.0.0.1:${PORT}/`,
+      { headers: { "Accept-Encoding": "gzip" } },
+      (response) => {
+        response.resume();
+        response.on("end", () => resolve({
+          statusCode: response.statusCode || 0,
+          headers: response.headers,
+        }));
+      },
+    );
+    req.on("error", reject);
+    req.setTimeout(3000, () => { req.destroy(); reject(new Error("timeout")); });
+  });
+
+  const encoding = typeof res.headers["content-encoding"] === "string" ? res.headers["content-encoding"] : "";
+  if (res.statusCode === 200 && encoding !== "gzip") {
+    console.error("FAIL: dashboard HTML did not enable gzip when explicitly requested.");
     cleanup(1);
   }
 }
 
 async function main() {
   await waitForUI();
-  await checkPage("/", ["OpenClaw", "Control Center", "usage", "lang="], "GET /");
-  await checkPage("/docs?lang=en", ["Open document workbench", "Control Center", "Docs"], "GET /docs?lang=en");
+  await checkDashboardOrLogin();
+  await checkDocsOrLogin();
+  await checkGzipSupport();
   console.log(`UI smoke passed on http://127.0.0.1:${PORT}`);
   cleanup(0);
 }
