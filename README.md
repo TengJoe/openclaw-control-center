@@ -1,3 +1,5 @@
+> Looking for English? Start here: [Open the English README](README.en.md)
+
 # OpenClaw Control Center
 
 <img src="docs/assets/overview-hero-zh.png" alt="OpenClaw Control Center 总览横幅截图" width="1200" />
@@ -71,10 +73,12 @@ curl http://127.0.0.1:4310/healthz
 - `总览`：系统状态、待处理事项、关键风险和运营摘要
 - `用量`：用量、花费、订阅窗口和连接状态
 - `员工`：谁真的在工作，谁只是排队待命
+- `协作`：父子会话接力与智能体之间的跨会话通信
 - `任务`：当前任务、审批、执行链和运行证据
 - `文档` 与 `记忆`：按活跃 OpenClaw agent 范围展示的源文件工作台
 
 ## 这个版本新增了什么
+- `协作`：新增独立 `协作` 页面，直接看父子会话接力和 `Main ⇄ Pandas` 这种已验证跨会话通信，不再只看执行链猜关系。
 - `设置`：新增 `接线状态`，直接告诉你哪些数据已经接好、哪些还差一步，以及该去哪里补。
 - `设置`：新增 `安全风险摘要`，把当前风险、影响和下一步建议翻译成人话。
 - `设置`：新增 `更新状态`，直接看当前版本、最新版本、更新通道和安装方式。
@@ -104,6 +108,21 @@ curl http://127.0.0.1:4310/healthz
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td width="56%">
+      <img src="docs/assets/collaboration-zh.png" alt="OpenClaw Control Center 中文协作页截图" width="100%" />
+    </td>
+    <td width="44%">
+      <img src="docs/assets/settings-insights-zh.png" alt="OpenClaw Control Center 中文安全与更新状态截图" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td><strong>协作页</strong><br />直接看父子会话接力，以及像 <code>Main ⇄ Pandas</code> 这样的已验证跨会话通信。</td>
+    <td><strong>安全与更新状态</strong><br />直接看当前风险、影响、下一步建议，以及当前版本和最新版本。</td>
+  </tr>
+</table>
+
 ## 5 分钟启动
 ```bash
 npm install
@@ -111,7 +130,7 @@ cp .env.example .env
 npm run build
 npm test
 npm run smoke:ui
-UI_MODE=true npm run dev
+npm run dev:ui
 ```
 
 然后打开：
@@ -125,6 +144,9 @@ UI_MODE=true npm run dev
 - `http://127.0.0.1:4310/?section=overview&lang=zh`
 - `http://127.0.0.1:4310/?section=usage-cost&lang=zh`
 - `http://127.0.0.1:4310/?section=team&lang=zh`
+说明：
+- 推荐用 `npm run dev:ui` 启动界面；它比 `UI_MODE=true npm run dev` 更稳，尤其是 Windows shell。
+- `npm run dev` 只会执行一次 monitor，不会启动 HTTP UI。
 
 ## 分区功能说明
 
@@ -142,6 +164,11 @@ UI_MODE=true npm run dev
 - 展示谁现在真的在工作，谁只是有排队中的任务。
 - 明确区分“正在执行”和“下一项”，避免把 backlog 误认为正在跑。
 - 最适合判断谁忙、谁闲、谁卡住、谁在等待。
+
+### 协作
+- 独立展示智能体之间怎么交接、谁先接单、谁派给了谁、回复从哪条会话回来。
+- 既能看父会话与子会话的接力，也能看 `sessions_send` / `inter-session message` 这类已验证跨会话通信。
+- 最适合理解“这件事到底是谁转给了谁、现在卡在谁这里”。
 
 ### 记忆
 - 一个直接基于源文件的记忆工作台，用来查看和编辑每日记忆与长期记忆。
@@ -376,8 +403,14 @@ LOCAL_TOKEN_AUTH_REQUIRED=true
 UI_MODE=false
 UI_PORT=4310
 
+# 只有在反向代理、Docker 或另一台机器需要访问 UI 时才设置：
+# UI_BIND_ADDRESS=0.0.0.0
+
 # 只有路径不是默认值时才需要设置：
 # OPENCLAW_HOME=/path/to/.openclaw
+# OPENCLAW_CONFIG_PATH=/path/to/openclaw.json
+# OPENCLAW_WORKSPACE_ROOT=/path/to/workspace
+# OPENCLAW_AGENT_ROOT=/path/to/one/agent/workspace
 # CODEX_HOME=/path/to/.codex
 # OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH=/path/to/subscription.json
 ```
@@ -385,9 +418,13 @@ UI_PORT=4310
 一般只需要在这些情况下修改：
 - `GATEWAY_URL`：你的 Gateway 不在默认本地地址
 - `OPENCLAW_HOME`：OpenClaw 不在 `~/.openclaw`
+- `OPENCLAW_CONFIG_PATH`：`openclaw.json` 不在默认位置
+- `OPENCLAW_WORKSPACE_ROOT`：control-center 装在工作区树外，需要显式指定工作区根目录
+- `OPENCLAW_AGENT_ROOT`：control-center 不在某个 agent 工作区内，但你仍希望旧版记忆/说明读取链指向指定 agent
 - `CODEX_HOME`：Codex 数据不在 `~/.codex`
 - `OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH`：订阅或账单快照文件在自定义位置
 - `UI_PORT`：`4310` 已被占用
+- `UI_BIND_ADDRESS`：反向代理、Docker、远程浏览器不在同一回环网络里，默认 `127.0.0.1` 无法被它们访问
 
 ### 5. 验证安装
 执行：
@@ -404,7 +441,7 @@ npm run smoke:ui
 
 ### 6. 启动界面
 ```bash
-UI_MODE=true npm run dev
+npm run dev:ui
 ```
 
 然后打开：
@@ -412,6 +449,7 @@ UI_MODE=true npm run dev
 - 英文界面：`http://127.0.0.1:4310/?section=overview&lang=en`
 
 如果你改了 `UI_PORT`，把 `4310` 替换成你的端口。
+如果你需要让反向代理、Docker 或另一台机器访问这个 UI，再额外设置 `UI_BIND_ADDRESS=0.0.0.0`。
 
 ### 7. 首次检查顺序
 1. `总览`：页面能正常打开，并且能看到当前系统状态
@@ -422,8 +460,9 @@ UI_MODE=true npm run dev
 
 ### 8. 如果看起来不对
 - 实时活动全空，通常是 `GATEWAY_URL` 错了，或者 OpenClaw Gateway 没启动
-- `文档 / 记忆` 范围不对，通常是 `OPENCLAW_HOME` 指错了，或者 `openclaw.json` 不可读
+- `文档 / 记忆` 范围不对，通常是 `OPENCLAW_HOME` / `OPENCLAW_CONFIG_PATH` / `OPENCLAW_WORKSPACE_ROOT` 指错了，或者 `openclaw.json` 不可读
 - `用量 / 订阅` 没数据，通常是 `CODEX_HOME` 或 `OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH` 没配对
+- 地址打不开或代理转发后不通，先确认你运行的是 `npm run dev:ui`；如果代理不在同一台机器/容器内，再设置 `UI_BIND_ADDRESS=0.0.0.0`
 - 如果你只是想先安全观察，不要改默认的只读和 mutation 开关
 
 ## 本地命令
@@ -440,6 +479,9 @@ UI_MODE=true npm run dev
 - `npm run validate`
 
 对于受保护的命令模式（如 `command:backup-export`、`command:import-validate`、`command:acks-prune`），如果 `LOCAL_TOKEN_AUTH_REQUIRED=true`，请先设置 `LOCAL_API_TOKEN=<token>`。
+另外：
+- `npm run dev`：只执行一次 monitor，不启动 UI
+- `npm run dev:ui`：启动本地 UI 服务
 
 ## 维护者发布说明
 如果你是仓库维护者、准备公开发布，再看这部分；普通安装用户可以跳过。

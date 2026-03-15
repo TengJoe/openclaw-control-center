@@ -1,3 +1,12 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+const DOTENV_PATH = join(process.cwd(), ".env");
+
+if (existsSync(DOTENV_PATH)) {
+  process.loadEnvFile?.(DOTENV_PATH);
+}
+
 export const GATEWAY_URL = readStringEnv(process.env.GATEWAY_URL, "ws://127.0.0.1:18789");
 
 export const READONLY_MODE = process.env.READONLY_MODE !== "false";
@@ -16,7 +25,7 @@ export const TASK_HEARTBEAT_MAX_TASKS_PER_RUN = parsePositiveInt(
 );
 
 export const POLLING_INTERVALS_MS = {
-  sessionsList: 5000,
+  sessionsList: 10000,
   sessionStatus: 2000,
   cron: 10000,
   approvals: 2000,

@@ -1,6 +1,6 @@
 # Progress
 
-## Phase 154 (Cherry-picked session-preview cold-start optimization) — Completed
+## Phase 156 (Cherry-picked session-preview cold-start optimization) — Completed
 - Scope:
   - Bring in the upstream session-preview cold-start optimization without reverting the fork's existing readonly-file fast paths, homepage changes, or local architecture.
 - Changed files:
@@ -14,6 +14,62 @@
 - Verification:
   - `npm run build`
   - `npm test`
+
+## Phase 155 (Standalone collaboration page for agent handoffs) — Completed
+- Scope:
+  - Add a dedicated `Collaboration / 协作` page so users can inspect agent-to-agent handoffs without overloading `Staff` or `Tasks`.
+  - Keep the presentation Apple-native and readable: no extra drilldown page, no inner-card scrolling, and no raw payload dumps.
+- Changed files:
+  - `src/ui/server.ts`
+  - `test/ui-render-smoke.test.ts`
+  - `docs/PROGRESS.md`
+- Implementation:
+  - Added a first-class `collaboration` dashboard section and sidebar entry between `Staff` and `Memory`.
+  - Reused existing execution-chain/session evidence to build collaboration threads instead of inventing a second runtime model.
+  - Added collaboration summary metrics for active, waiting handoff, blocked, and completed-today threads.
+  - Built inline-expandable collaboration thread cards with:
+    - agent avatar chains
+    - current-owner status
+    - short human summaries
+    - a compact handoff timeline
+    - folded technical details for session keys
+  - Added lightweight client-side filters for all / in progress / blocked / completed / multi-agent / Main-dispatched views.
+  - Kept tool noise out of the default view so the page reads like collaboration history rather than backend logs.
+- Verification:
+  - `npm run build`
+  - `npm test`
+  - `npm run smoke:ui`
+- Remaining gap:
+  - V1 still derives collaboration threads from visible execution-chain evidence, so it is strongest for accepted/spawned parent-child flows and not yet a full free-form chat transcript browser.
+
+## Phase 154 (Workspace root overrides and USER/TASKS doc discovery) — Completed
+- Scope:
+  - Fix document and memory file discovery when control-center is installed outside the OpenClaw workspace tree.
+  - Expose `USER.md` and `TASKS.md` in the workspace file workbench instead of silently omitting them.
+- Changed files:
+  - `src/ui/server.ts`
+  - `.env.example`
+  - `README.md`
+  - `README.en.md`
+  - `INSTALL_PROMPT.md`
+  - `INSTALL_PROMPT.en.md`
+  - `test/ui-render-smoke.test.ts`
+  - `docs/PROGRESS.md`
+- Implementation:
+  - Added explicit support for `OPENCLAW_CONFIG_PATH`, `OPENCLAW_WORKSPACE_ROOT`, and `OPENCLAW_AGENT_ROOT` in the UI server path resolution layer.
+  - Replaced the hardcoded `process.cwd()`-relative workspace-root assumption with a safer resolution order:
+    - explicit `OPENCLAW_WORKSPACE_ROOT`
+    - inferred workspace root from `openclaw.json`
+    - fallback to `OPENCLAW_HOME/workspace`
+  - Resolved configured agent workspace paths relative to the OpenClaw config directory so relative `workspace` entries no longer break when control-center is installed elsewhere.
+  - Added `USER.md` and `TASKS.md` to both shared and per-agent workspace document candidates, and raised their sort priority so they surface naturally in the workbench.
+  - Extended install docs and copy-paste install prompts so standalone installs outside the workspace tree now point users to the correct override envs instead of leaving discovery to fail silently.
+- Verification:
+  - `npm run build`
+  - `npm test`
+  - `npm run smoke:ui`
+- Remaining gap:
+  - The legacy agent-local memory summary helpers still use `OPENCLAW_AGENT_ROOT` for a few non-workbench fallbacks. Workbench discovery is fixed, but fully decoupling every legacy fallback from repo location can be done later if standalone users report it.
 
 ## Phase 153 (CLI insight cards for connection, memory, context, security, and update state) — Completed
 - Scope:

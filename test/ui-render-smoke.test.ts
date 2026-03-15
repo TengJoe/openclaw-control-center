@@ -123,6 +123,7 @@ test("dashboard section navigation renders required tabs with active state", asy
   const en = renderDashboardSectionNavForSmoke("team", "en");
   assert(en.includes("Overview"));
   assert(en.includes("Staff"));
+  assert(en.includes("Collaboration"));
   assert(en.includes("Memory"));
   assert(en.includes("Documents"));
   assert(en.includes("Usage"));
@@ -132,6 +133,8 @@ test("dashboard section navigation renders required tabs with active state", asy
   assert(en.includes("/?section=team"));
   assert(en.indexOf("Overview") < en.indexOf("Usage"));
   assert(en.indexOf("Usage") < en.indexOf("Staff"));
+  assert(en.indexOf("Staff") < en.indexOf("Collaboration"));
+  assert(en.indexOf("Collaboration") < en.indexOf("Memory"));
   assert(!en.includes("Executors"));
   assert(!en.includes("Calendar"));
   assert(!en.includes("Attention"));
@@ -140,6 +143,7 @@ test("dashboard section navigation renders required tabs with active state", asy
   const zh = renderDashboardSectionNavForSmoke("team", "zh");
   assert(zh.includes("总览"));
   assert(zh.includes("员工"));
+  assert(zh.includes("协作"));
   assert(zh.includes("记忆"));
   assert(zh.includes("文档"));
   assert(zh.includes("用量"));
@@ -147,6 +151,8 @@ test("dashboard section navigation renders required tabs with active state", asy
   assert(zh.includes("设置"));
   assert(zh.indexOf("总览") < zh.indexOf("用量"));
   assert(zh.indexOf("用量") < zh.indexOf("员工"));
+  assert(zh.indexOf("员工") < zh.indexOf("协作"));
+  assert(zh.indexOf("协作") < zh.indexOf("记忆"));
   assert(!zh.includes("智能体"));
   assert(!zh.includes("日历"));
   assert(!zh.includes("待处理"));
@@ -162,6 +168,19 @@ test("legacy mission-control routes resolve to dashboard sections", async () => 
   assert.equal(resolveLegacyDashboardSectionForSmoke("/not-a-route"), undefined);
   assert.equal(resolveDashboardSection(new URLSearchParams("section=alerts")), "overview");
   assert.equal(resolveDashboardSection(new URLSearchParams("section=replay-audit")), "overview");
+});
+
+test("session activity timestamp prefers the fresher runtime signal over older history", async () => {
+  const { pickLatestSessionActivityTimestampForSmoke } = await import("../src/ui/server");
+
+  assert.equal(
+    pickLatestSessionActivityTimestampForSmoke("2026-03-14T05:36:59.486Z", "2026-03-14T15:22:18.823Z"),
+    "2026-03-14T15:22:18.823Z",
+  );
+  assert.equal(
+    pickLatestSessionActivityTimestampForSmoke(undefined, "2026-03-14T15:00:00.019Z"),
+    "2026-03-14T15:00:00.019Z",
+  );
 });
 
 test("tasks section prioritizes schedule and cron before tracked task detail", async () => {
@@ -182,6 +201,36 @@ test("tasks section prioritizes schedule and cron before tracked task detail", a
   assert(source.includes('t("Execution chain", "执行链")'));
   assert(source.includes('Accepted and spawned child sessions'));
   assert(source.includes('if (options.section === "calendar") sectionBody = projectsSection;'));
+});
+
+test("collaboration section is a standalone dashboard page with inline thread expanders", async () => {
+  const source = await readFile("src/ui/server.ts", "utf8");
+  assert(source.includes('"collaboration"'));
+  assert(source.includes('label: "Collaboration", blurb: "Agent handoffs and teamwork"'));
+  assert(source.includes('label: "协作", blurb: "智能体交接与协同"'));
+  assert(source.includes('activeSection === "collaboration"'));
+  assert(source.includes('const collaborationSection = `'));
+  assert(source.includes('id="collaboration-hub"'));
+  assert(source.includes('id="collaboration-board"'));
+  assert(source.includes('t("Team collaboration", "团队协作")'));
+  assert(source.includes('t("Collaboration threads", "协作线程")'));
+  assert(source.includes('data-collab-root'));
+  assert(source.includes('data-collab-filter="multi-agent"'));
+  assert(source.includes('data-collab-filter="main-dispatched"'));
+  assert(source.includes('collaboration-route-avatars'));
+  assert(source.includes('collaboration-participant-label'));
+  assert(source.includes('collaboration-thread-card'));
+  assert(source.includes('deriveCollaborationTaskTitle({'));
+  assert(source.includes('deriveInterSessionTaskTitle({'));
+  assert(source.includes('pickUiText(language, "Cross-session communication", "跨会话通信")'));
+  assert(source.includes('pickUiText(language, "Sending session", "发送会话")'));
+  assert(source.includes('pickUiText(language, "Receiving session", "接收会话")'));
+  assert(source.includes('pickUiText(input.language, "Parent accepted work", "父会话接到任务")'));
+  assert(source.includes('pickUiText(input.language, "Parent opened child session", "父会话发起子会话")'));
+  assert(source.includes('pickUiText(input.language, "Child session reply", "子会话最近回复")'));
+  assert(source.includes('renderCollaborationThreadCards(collaborationThreadCards, options.language)'));
+  assert(source.includes('if (options.section === "collaboration") sectionBody = collaborationSection;'));
+  assert(!source.includes('当前还没有看到跨智能体协作'));
 });
 
 test("global visibility card keeps plain-language EN/ZH copy for four key signals", async () => {
@@ -337,7 +386,8 @@ test("dashboard keeps global visibility as overview-only block", async () => {
   assert(source.includes("buildTaskDetailHref(task.taskId, input.language)"));
   assert(source.includes('const language = resolveUiLanguage(url.searchParams, "zh");'));
   assert(source.includes('buildUsageCostSnapshot(snapshot, mode)'));
-  assert(source.includes('const needsSessionPreview = activeSection === "projects-tasks";'));
+  assert(source.includes('const needsSessionPreview ='));
+  assert(source.includes('activeSection === "overview" || activeSection === "collaboration";'));
   assert(source.includes("const allApprovals = [...(snapshot.approvals ?? [])].sort(compareApprovals);"));
   assert(source.includes('const pendingApprovalsCount = allApprovals.filter((item) => item.status === "pending").length;'));
   assert(source.includes("replayPreview.stats.timeline.total"));
@@ -453,11 +503,14 @@ test("memory and workspace sections expose editable file workbenches", async () 
   assert(source.includes('const AGENT_DOCUMENT_FILE_CANDIDATES = ['));
   assert(source.includes('"IDENTITY.md"'));
   assert(source.includes('"SOUL.md"'));
+  assert(source.includes('"USER.md"'));
+  assert(source.includes('"TASKS.md"'));
   assert(source.includes('"BOOTSTRAP.md"'));
   assert(source.includes("listMemoryFacetOptions()"));
   assert(source.includes("listWorkspaceFacetOptions()"));
   assert(source.includes("facetOptions: memoryFacetOptions"));
   assert(source.includes("facetOptions: workspaceFacetOptions"));
+  assert(source.includes('title: basename(input.sourcePath) || relativePath,'));
   assert(source.includes("defaultFacetKey: \"main\""));
   assert(source.includes("defaultFacetKey: \"main\""));
   assert(source.includes("includeAllFacet: false"));
@@ -532,9 +585,39 @@ test("memory and workspace sections expose editable file workbenches", async () 
 
 test("editable agent scopes follow configured agents before workspace folders", async () => {
   const {
+    resolveOpenClawWorkspaceRootForSmoke,
     resolveEditableAgentScopesFromConfigForSmoke,
     resolveEditableAgentScopesWithFallbackForSmoke,
   } = await import("../src/ui/server");
+
+  assert.equal(
+    resolveOpenClawWorkspaceRootForSmoke({
+      openclawHomeDir: "/home/test/.openclaw",
+      configPath: "/home/test/.openclaw/openclaw.json",
+      configText: JSON.stringify({
+        agents: {
+          list: [
+            { id: "main" },
+            { id: "pandas", workspace: "/srv/openclaw/workspace/agents/pandas" },
+          ],
+        },
+      }),
+    }),
+    "/srv/openclaw/workspace",
+  );
+  assert.equal(
+    resolveOpenClawWorkspaceRootForSmoke({
+      explicitWorkspaceRoot: "/data/openclaw/workspace",
+      openclawHomeDir: "/home/test/.openclaw",
+    }),
+    "/data/openclaw/workspace",
+  );
+  assert.equal(
+    resolveOpenClawWorkspaceRootForSmoke({
+      openclawHomeDir: "/home/test/.openclaw",
+    }),
+    "/home/test/.openclaw/workspace",
+  );
 
   const scopes = resolveEditableAgentScopesFromConfigForSmoke({
     agents: {

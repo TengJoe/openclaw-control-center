@@ -1,3 +1,5 @@
+> 中文用户可在这里切换：[打开中文 README](README.md)
+
 # OpenClaw Control Center
 
 <img src="docs/assets/overview-hero-en.png" alt="OpenClaw Control Center overview hero screenshot" width="1200" />
@@ -71,10 +73,12 @@ curl http://127.0.0.1:4310/healthz
 - `Overview`: health, current state, decisions waiting, and operator-facing summaries
 - `Usage`: usage, spend, subscription windows, and connector status
 - `Staff`: who is really working now versus only queued
+- `Collaboration`: parent-child relays and cross-session messages between existing agent sessions
 - `Tasks`: current work, approvals, execution chains, and runtime evidence
 - `Documents` and `Memory`: source-backed workbenches scoped to active OpenClaw agents
 
 ## What this release adds
+- `Collaboration`: a new standalone collaboration page so you can see both parent-child handoffs and verified cross-session agent communication such as `Main ⇄ Pandas`, instead of inferring everything from execution chains.
 - `Settings`: a new `Connection health` card that tells you what is already wired, what is still partial, and where to finish setup.
 - `Settings`: a new `Security risk summary` that translates current risk, impact, and next-step guidance into plain operator-facing language.
 - `Settings`: a new `Update status` card for current version, latest version, update channel, and install method.
@@ -104,6 +108,21 @@ Example UI from a local OpenClaw environment:
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td width="56%">
+      <img src="docs/assets/collaboration-en.png" alt="OpenClaw Control Center collaboration screenshot" width="100%" />
+    </td>
+    <td width="44%">
+      <img src="docs/assets/settings-insights-en.png" alt="OpenClaw Control Center security and update status screenshot" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Collaboration page</strong><br />See parent-child relays and verified cross-session communication such as <code>Main ⇄ Pandas</code> in one place.</td>
+    <td><strong>Security and update status</strong><br />See current risk, impact, next-step guidance, and the gap between your current and latest version.</td>
+  </tr>
+</table>
+
 ## 5-minute start
 ```bash
 npm install
@@ -111,7 +130,7 @@ cp .env.example .env
 npm run build
 npm test
 npm run smoke:ui
-UI_MODE=true npm run dev
+npm run dev:ui
 ```
 
 Then open:
@@ -125,6 +144,9 @@ Recommended first pages after login:
 - `http://127.0.0.1:4310/?section=overview&lang=en`
 - `http://127.0.0.1:4310/?section=usage-cost&lang=en`
 - `http://127.0.0.1:4310/?section=team&lang=en`
+Notes:
+- Prefer `npm run dev:ui`; it is the more reliable cross-platform entry, especially on Windows shells.
+- `npm run dev` only performs one monitor pass and does not start the HTTP UI.
 
 ## Section-by-section tour
 
@@ -142,6 +164,11 @@ Recommended first pages after login:
 - Shows who is truly active now versus who only has queued work.
 - Separates live work from “next up” so backlog is not confused with active execution.
 - Best when you want to know who is busy, idle, blocked, or waiting.
+
+### Collaboration
+- Shows how work moves between agents: who accepted it first, who handed it off, and which session is holding the next move.
+- Covers both parent-child session relays and verified cross-session communication such as `sessions_send` / `inter-session message`.
+- Best when you want to understand “who passed this to whom, and where is the collaboration waiting now?”
 
 ### Memory
 - A source-backed workbench for daily and long-term memory files.
@@ -190,7 +217,7 @@ For:
 4. `npm run build`
 5. `npm test`
 6. `npm run smoke:ui`
-7. `UI_MODE=true npm run dev`
+7. `npm run dev:ui`
 
 ## Installation and onboarding
 
@@ -390,8 +417,14 @@ LOCAL_TOKEN_AUTH_REQUIRED=true
 UI_MODE=false
 UI_PORT=4310
 
+# Optional only when a reverse proxy, container, or another machine must reach the UI:
+# UI_BIND_ADDRESS=0.0.0.0
+
 # Optional only when your paths differ from the defaults:
 # OPENCLAW_HOME=/path/to/.openclaw
+# OPENCLAW_CONFIG_PATH=/path/to/openclaw.json
+# OPENCLAW_WORKSPACE_ROOT=/path/to/workspace
+# OPENCLAW_AGENT_ROOT=/path/to/one/agent/workspace
 # CODEX_HOME=/path/to/.codex
 # OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH=/path/to/subscription.json
 ```
@@ -399,9 +432,13 @@ UI_PORT=4310
 Change only these values if your environment needs it:
 - `GATEWAY_URL`: when your OpenClaw Gateway is not on the default local socket
 - `OPENCLAW_HOME`: when OpenClaw is not stored in `~/.openclaw`
+- `OPENCLAW_CONFIG_PATH`: when `openclaw.json` lives somewhere custom
+- `OPENCLAW_WORKSPACE_ROOT`: when control-center is installed outside the OpenClaw workspace tree and you want to pin the true workspace root
+- `OPENCLAW_AGENT_ROOT`: when control-center is not inside an agent workspace but you still want legacy agent-local memory/mission reads to point at one specific agent workspace
 - `CODEX_HOME`: when Codex data is not stored in `~/.codex`
 - `OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH`: when your billing/subscription snapshot lives somewhere custom
 - `UI_PORT`: when `4310` is already in use
+- `UI_BIND_ADDRESS`: when your reverse proxy, container, or browser is not on the same loopback network and cannot reach the default `127.0.0.1` bind
 
 ### 5. Verify the install
 Run:
@@ -418,7 +455,7 @@ Expected result:
 
 ### 6. Start the UI
 ```bash
-UI_MODE=true npm run dev
+npm run dev:ui
 ```
 
 Then open:
@@ -426,6 +463,7 @@ Then open:
 - Chinese UI: `http://127.0.0.1:4310/?section=overview&lang=zh`
 
 If you changed `UI_PORT`, replace `4310` with your chosen port.
+If a reverse proxy, container, or another machine must reach the UI, also set `UI_BIND_ADDRESS=0.0.0.0`.
 
 ### 7. First-use checklist
 On your first launch, check these pages in order:
@@ -437,8 +475,9 @@ On your first launch, check these pages in order:
 
 ### 8. If something looks wrong
 - Empty live activity usually means `GATEWAY_URL` is wrong or the OpenClaw Gateway is not running.
-- Missing `Documents / Memory` agents usually means `OPENCLAW_HOME` points to the wrong OpenClaw root or `openclaw.json` is missing.
+- Missing `Documents / Memory` agents usually means `OPENCLAW_HOME`, `OPENCLAW_CONFIG_PATH`, or `OPENCLAW_WORKSPACE_ROOT` points to the wrong place, or `openclaw.json` is missing.
 - Missing usage/subscription data usually means `CODEX_HOME` or `OPENCLAW_SUBSCRIPTION_SNAPSHOT_PATH` needs to be set.
+- If the address does not open or a reverse proxy cannot reach the app, first confirm you started `npm run dev:ui`; if the proxy is outside the same machine/container, set `UI_BIND_ADDRESS=0.0.0.0`.
 - If you only want a safe read-only dashboard, do not change the mutation defaults.
 
 ## Local commands
@@ -454,6 +493,9 @@ On your first launch, check these pages in order:
 - `npm run validate`
 
 For protected command modes (`command:backup-export`, `command:import-validate`, `command:acks-prune`), set `LOCAL_API_TOKEN=<token>` unless `LOCAL_TOKEN_AUTH_REQUIRED=false`.
+Also:
+- `npm run dev`: runs one monitor pass without starting the UI
+- `npm run dev:ui`: starts the local UI server
 
 ## Maintainer publishing notes
 If you are publishing the repository itself, not just installing it, use this section. Normal operators can skip it.

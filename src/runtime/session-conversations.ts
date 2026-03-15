@@ -13,7 +13,7 @@ export interface SessionConversationFilters {
   q?: string;
 }
 
-export type SessionHistoryKind = "message" | "tool_event" | "accepted" | "spawn";
+export type SessionHistoryKind = "message" | "inter_session" | "tool_event" | "accepted" | "spawn";
 
 export interface SessionExecutionChainSummary {
   accepted: boolean;
@@ -29,6 +29,7 @@ export interface SessionExecutionChainSummary {
 }
 
 export interface SessionConversationListItem extends SessionSummary {
+  taskSnippet?: string;
   latestSnippet?: string;
   latestRole?: string;
   latestKind?: SessionHistoryKind;
@@ -38,6 +39,7 @@ export interface SessionConversationListItem extends SessionSummary {
   toolEventCount: number;
   historyError?: string;
   executionChain?: SessionExecutionChainSummary;
+  interSessionSignals?: SessionInterSessionSignal[];
 }
 
 export interface SessionConversationListResult {
@@ -60,7 +62,17 @@ export interface SessionHistoryMessage {
   truncated?: boolean;
   parentSessionKey?: string;
   childSessionKey?: string;
+  provenanceKind?: string;
+  sourceSessionKey?: string;
+  sourceTool?: string;
   inferred?: boolean;
+}
+
+export interface SessionInterSessionSignal {
+  sourceSessionKey: string;
+  sourceTool?: string;
+  timestamp?: string;
+  snippet: string;
 }
 
 export interface SessionConversationDetailResult {
@@ -200,6 +212,7 @@ export async function listSessionConversations(
         toolEventCount: history.messages.filter((message) => message.kind === "tool_event").length,
         historyError: history.error,
         executionChain: inferSessionExecutionChain(session, history.messages),
+        interSessionSignals: extractInterSessionSignals(history.messages),
       };
     }),
   );
@@ -343,14 +356,18 @@ function parseHistoryEntry(input: unknown): SessionHistoryMessage | null {
   const author = extractAuthor(obj, messageObj);
   const timestamp = extractTimestamp(obj, messageObj);
   const content = extractEntryContent(obj, messageObj);
+  const provenance = extractProvenance(obj, messageObj);
 
   if (!content) return null;
   return buildMessageEntry({
-    kind: "message",
+    kind: provenance.kind === "inter_session" ? "inter_session" : "message",
     role,
     author,
     content,
     timestamp,
+    provenanceKind: provenance.kind,
+    sourceSessionKey: provenance.sourceSessionKey,
+    sourceTool: provenance.sourceTool,
   });
 }
 
@@ -434,6 +451,9 @@ function buildMessageEntry(input: {
   toolStatus?: string;
   parentSessionKey?: string;
   childSessionKey?: string;
+  provenanceKind?: string;
+  sourceSessionKey?: string;
+  sourceTool?: string;
   inferred?: boolean;
 }): SessionHistoryMessage {
   const truncatedContent = truncateText(input.content, MAX_ENTRY_CONTENT_CHARS);
@@ -448,8 +468,36 @@ function buildMessageEntry(input: {
     truncated: truncatedContent.truncated || undefined,
     parentSessionKey: input.parentSessionKey,
     childSessionKey: input.childSessionKey,
+    provenanceKind: input.provenanceKind,
+    sourceSessionKey: input.sourceSessionKey,
+    sourceTool: input.sourceTool,
     inferred: input.inferred || undefined,
   };
+}
+
+function extractProvenance(
+  obj: Record<string, unknown>,
+  messageObj?: Record<string, unknown>,
+): { kind?: string; sourceSessionKey?: string; sourceTool?: string } {
+  const provenanceObj = asObject(messageObj?.provenance) ?? asObject(obj.provenance);
+  if (!provenanceObj) return {};
+  return {
+    kind: asString(provenanceObj.kind) ?? undefined,
+    sourceSessionKey:
+      firstString(provenanceObj, ["sourceSessionKey", "source_session_key", "sourceSession"]) ?? undefined,
+    sourceTool: firstString(provenanceObj, ["sourceTool", "source_tool", "tool"]) ?? undefined,
+  };
+}
+
+function extractInterSessionSignals(messages: SessionHistoryMessage[]): SessionInterSessionSignal[] {
+  return messages
+    .filter((message) => message.kind === "inter_session" && (message.sourceSessionKey ?? "").trim())
+    .map((message) => ({
+      sourceSessionKey: message.sourceSessionKey!.trim(),
+      sourceTool: message.sourceTool,
+      timestamp: message.timestamp,
+      snippet: summarizeSnippet(message.content),
+    }));
 }
 
 function looksLikeToolEvent(obj: Record<string, unknown>): boolean {
